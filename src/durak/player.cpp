@@ -2,7 +2,7 @@
 
 namespace durak::engine {
 
-std::optional<action_id_t> Player::get_action(PlayerView /*view*/) const {
+std::optional<action_id_t> Player::get_action(const PlayerView& /*view*/) const {
   return {};
 }
 

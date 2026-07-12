@@ -70,10 +70,17 @@ class DurakEngine {
   friend class PlayerView;
 
   /*========================= Helpers ==========================*/
+  Player& get_player(modulo_t pos);
   Player& get_attacker();
+  Player& get_defender();
   PlayerView view_for(const Player& player);
   void apply_action(player_id_t id, action_id_t action_id,
                     const actions_t& actions);
+  bool cycle_player(Player& player, const actions_t& actions);
+  [[nodiscard]] bool run_cycle(modulo_t start, const actions_t& actions,
+                               std::optional<modulo_t> exclude = std::nullopt);
+  [[nodiscard]] bool toss_cycle();
+  [[nodiscard]] bool beat_cycle();
 
   /*======================= Data fields ========================*/
   /*======================== Game Rules ========================*/

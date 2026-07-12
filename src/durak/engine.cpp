@@ -43,39 +43,76 @@ modulo_base_t DurakEngine::get_defender_pos() const {
   return defender_pos_.get_num();
 }
 
-Player& DurakEngine::get_attacker() {
-  return players_.at(attacker_pos_.as<std::size_t>());
+Player& DurakEngine::get_player(modulo_t pos) {
+  return players_.at(pos.as<std::size_t>());
 }
+
+Player& DurakEngine::get_attacker() { return get_player(attacker_pos_); }
+
+Player& DurakEngine::get_defender() { return get_player(defender_pos_); }
 
 PlayerView DurakEngine::view_for(const Player& player) {
   return PlayerView{*this, player.get_id()};
 }
 
 void DurakEngine::apply_action(player_id_t id, action_id_t action_id,
-                               const actions_t& actions) {                    
+                               const actions_t& actions) {
   if (actions.contains(action_id)) {
     actions.at(action_id)->apply(id, *this);
   }
 }
 
+[[nodiscard]] bool DurakEngine::cycle_player(Player& player,
+                                             const actions_t& actions) {
+  bool is_action_used = false;
+
+  auto view = view_for(player);
+  while (const auto action_id = player.get_action(view)) {
+    apply_action(player.get_id(), *action_id, actions);
+    is_action_used = true;
+  }
+
+  return is_action_used;
+}
+
 void DurakEngine::open_phase() {
   k_deal_rule_->apply(*this);
-  auto& player = get_attacker();
 
-  while (const auto action_id = player.get_action(view_for(player))) {
-    apply_action(player.get_id(), *action_id, k_open_actions_);
-  }
+  // open player must do something
+  while (not cycle_player(get_attacker(), k_open_actions_));
 
   toss_phase();
 }
 
 void DurakEngine::toss_phase() {
-  // TODO: impl
+
+  // process while players toss
+  while (toss_cycle());
+
   beat_phase();
 }
 
+bool DurakEngine::run_cycle(modulo_t start, const actions_t& actions,
+                            std::optional<modulo_t> exclude) {
+  bool acted = false;
+  auto pos = start;
+  for (std::size_t i = 0; i < players_.size(); ++i, pos += k_next_offset_) {
+    if (exclude && pos == *exclude) continue;
+    acted |= cycle_player(get_player(pos), actions);
+  }
+  return acted;
+}
+
+[[nodiscard]] bool DurakEngine::toss_cycle() {
+  return run_cycle(attacker_pos_, k_toss_actions_, defender_pos_);
+}
+
 void DurakEngine::beat_phase() {
-  // TODO: impl
+  while (beat_cycle());
+}
+
+[[nodiscard]] bool DurakEngine::beat_cycle() {
+  return run_cycle(defender_pos_, k_beat_actions_);
 }
 
 }  // namespace durak::engine
