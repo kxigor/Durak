@@ -36,8 +36,8 @@ class DurakEngine {
 
  public:
   /*================= Constructors/Destructors =================*/
-  DurakEngine(rule_t first_attacker, modulo_base_t next_offset,
-              rule_t init_stock, rule_t leading_stock, actions_t open_actions,
+  DurakEngine(rule_t first_turn, modulo_base_t next_offset, rule_t deck_init,
+              rule_t deal, rule_t round_end, actions_t open_actions,
               actions_t toss_actions, actions_t beat_actions);
 
   DurakEngine(const DurakEngine& /*unused*/) = delete;
@@ -61,13 +61,18 @@ class DurakEngine {
   modulo_base_t get_defender_pos() const;
   std::optional<GameResult> get_last_game_result() const;
 
+ private:
+  /*========================= Friends ==========================*/
+  friend class PlayerView;
+
   /*======================== Game Cycle ========================*/
+  void game_cycle();
+  void play_round();
   void open_phase();
   void toss_phase();
   void beat_phase();
-
- private:
-  friend class PlayerView;
+  bool is_game_over() const;
+  void define_loser();
 
   /*========================= Helpers ==========================*/
   Player& get_player(modulo_t pos);
@@ -76,7 +81,7 @@ class DurakEngine {
   PlayerView view_for(const Player& player);
   void apply_action(player_id_t id, action_id_t action_id,
                     const actions_t& actions);
-  bool cycle_player(Player& player, const actions_t& actions);
+  [[nodiscard]] bool cycle_player(Player& player, const actions_t& actions);
   [[nodiscard]] bool run_cycle(modulo_t start, const actions_t& actions,
                                std::optional<modulo_t> exclude = std::nullopt);
   [[nodiscard]] bool toss_cycle();
@@ -88,6 +93,7 @@ class DurakEngine {
   const modulo_base_t k_next_offset_{};
   const rule_t k_deck_init_rule_{};
   const rule_t k_deal_rule_{};
+  const rule_t k_round_end_rule_{};
 
   const actions_t k_open_actions_{};
   const actions_t k_toss_actions_{};

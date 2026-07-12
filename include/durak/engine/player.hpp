@@ -26,6 +26,10 @@ class Player {
 
   /*========================= Getters ==========================*/
   player_id_t get_id() const { return id_; }
+  std::size_t get_card_count() const { return cards_.size(); }
+  bool has_cards() const {
+    return get_card_count() > 0;
+  }
 
   /*=========================== Game ===========================*/
   std::optional<action_id_t> get_action(const PlayerView& view) const;

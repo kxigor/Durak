@@ -16,11 +16,11 @@ std::size_t PlayerView::get_stock_size() const {
 
 Card PlayerView::get_trump() const { return engine_.trump_; }
 
-modulo_base_t PlayerView::get_attacking_pos() const {
+modulo_base_t PlayerView::get_attacker_pos() const {
   return engine_.attacker_pos_.get_num();
 }
 
-modulo_base_t PlayerView::get_defending_pos() const {
+modulo_base_t PlayerView::get_defender_pos() const {
   return engine_.defender_pos_.get_num();
 }
 
@@ -29,7 +29,12 @@ modulo_base_t PlayerView::get_next_offset() const {
 }
 
 std::vector<std::size_t> PlayerView::get_players_card_counts() const {
-  return {};
+  std::vector<std::size_t> counts;
+  counts.reserve(engine_.players_.size());
+  for (const auto& player : engine_.players_) {
+    counts.push_back(player.get_card_count());
+  }
+  return counts;
 }
 
 }  // namespace durak::engine

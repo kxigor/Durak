@@ -12,7 +12,7 @@ class ModuloRing {
   /*======================= Constructors =======================*/
   ModuloRing() = default;
 
-  ModuloRing(num_t mod) : mod_{std::move(mod)} {}
+  explicit ModuloRing(num_t mod) : mod_{std::move(mod)} {}
 
   ModuloRing(num_t mod, num_t num)
       : mod_{std::move(mod)}, num_{std::move(num)} {
@@ -41,7 +41,7 @@ class ModuloRing {
   }
 
   ModuloRing& operator-=(const ModuloRing& rhs) {
-    if (num_ < rhs_num) {
+    if (num_ < rhs.num_) {
       num_ += mod_;
     }
     num_ -= rhs.num_;
@@ -57,6 +57,14 @@ class ModuloRing {
     return ModuloRing{*this} -= rhs;
   }
 
+  ModuloRing& operator+=(num_t rhs) { return *this += create(rhs); }
+
+  ModuloRing& operator-=(num_t rhs) { return *this -= create(rhs); }
+
+  ModuloRing operator+(num_t rhs) const { return *this + create(rhs); }
+
+  ModuloRing operator-(num_t rhs) const { return *this - create(rhs); }
+
   /*========================== Fabric ==========================*/
   ModuloRing create(num_t num) const { return ModuloRing{mod_, num}; }
 
@@ -66,8 +74,6 @@ class ModuloRing {
   void set_mod(num_t mod) { mod_ = std::move(mod); }
 
   /*========================= Getters ==========================*/
-  const std::pair<num_t, num_t> get_pair() const { return {num_, mod_}; }
-
   const num_t& get_num() const { return num_; }
 
   const num_t& get_mod() const { return mod_; }
