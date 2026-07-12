@@ -1,5 +1,8 @@
 add_library(durak
   engine.cpp
+  table.cpp
+  player.cpp
+  player_view.cpp
 )
 
 target_include_directories(durak

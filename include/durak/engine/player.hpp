@@ -28,11 +28,7 @@ class Player {
   player_id_t get_id() const { return id_; }
 
   /*=========================== Game ===========================*/
-  std::optional<action_id_t> get_action(PlayerView view) const {
-    // TODO: тут уже важно кто и что, пока что заглушка, возможно сделать это
-    // просто интерфейсом в будущем
-    return {};
-  }
+  std::optional<action_id_t> get_action(PlayerView view) const;
 
  private:
   /*======================= Data fields ========================*/
