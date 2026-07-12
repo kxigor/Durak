@@ -3,8 +3,8 @@
 using namespace durak::engine;
 
 struct StubRule : GameRule {
-  void apply(DurakEngine&) override {}
-  bool is_applicable(DurakEngine&) const override { return true; }
+  void apply(GameRuleView&) override {}
+  bool is_applicable(const GameRuleView&) const override { return true; }
   const std::string& get_name() const noexcept override {
     static std::string name = "stub";
     return name;

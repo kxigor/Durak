@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include <cstddef>
 #include <optional>
 #include <vector>
 
@@ -13,7 +13,7 @@ namespace durak::engine {
 class Player {
  public:
   /*================= Constructors/Destructors =================*/
-  Player(player_id_t id) : id_{id} {}
+  explicit Player(player_id_t id);
 
   Player(const Player& /*unused*/) = delete;
   Player(Player&& /*unused*/) = default;
@@ -25,11 +25,12 @@ class Player {
   Player& operator=(Player&& /*unused*/) = default;
 
   /*========================= Getters ==========================*/
-  player_id_t get_id() const { return id_; }
-  std::size_t get_card_count() const { return cards_.size(); }
-  bool has_cards() const {
-    return get_card_count() > 0;
-  }
+  player_id_t get_id() const;
+  std::size_t get_card_count() const;
+  bool has_cards() const;
+
+  /*======================== Modifiers =========================*/
+  void add_card(Card card);
 
   /*=========================== Game ===========================*/
   std::optional<action_id_t> get_action(const PlayerView& view) const;

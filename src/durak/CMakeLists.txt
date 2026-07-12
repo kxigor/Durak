@@ -3,6 +3,7 @@ add_library(durak
   table.cpp
   player.cpp
   player_view.cpp
+  game_rule_view.cpp
 )
 
 target_include_directories(durak

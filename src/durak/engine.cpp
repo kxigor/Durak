@@ -17,41 +17,14 @@ DurakEngine::DurakEngine(rule_t first_turn, modulo_base_t next_offset,
       k_toss_actions_{std::move(toss_actions)},
       k_beat_actions_{std::move(beat_actions)} {}
 
-std::optional<DurakEngine::GameResult> DurakEngine::get_last_game_result() const {
-  return last_game_result_;
-}
-
-void DurakEngine::game_cycle() {
-  while (!is_game_over()) {
-    play_round();
-  }
-  define_loser();
-}
-
-void DurakEngine::play_round() {
-  open_phase();
-  toss_phase();
-  beat_phase();
-  k_round_end_rule_->apply(*this);
-}
-
-bool DurakEngine::is_game_over() const {
-  return std::ranges::count_if(players_, &Player::has_cards) <= 1;
-}
-
-void DurakEngine::define_loser() {
-  auto it = std::ranges::find_if(players_, &Player::has_cards);
-  last_game_result_ =
-      it != players_.end() ? GameResult{it->get_id()} : GameResult{};
-}
-
 void DurakEngine::start(std::vector<Player> players) {
   game_status_.is_game_running_ = true;
   players_ = std::move(players);
   table_.clear();
 
-  k_first_turn_rule_->apply(*this);
-  k_deck_init_rule_->apply(*this);
+  auto view = rule_view();
+  k_first_turn_rule_->apply(view);
+  k_deck_init_rule_->apply(view);
 
   game_cycle();
 }
@@ -70,6 +43,50 @@ modulo_base_t DurakEngine::get_defender_pos() const {
   return defender_pos_.get_num();
 }
 
+std::optional<DurakEngine::GameResult> DurakEngine::get_last_game_result() const {
+  return last_game_result_;
+}
+
+void DurakEngine::game_cycle() {
+  while (!is_game_over()) {
+    play_round();
+  }
+  define_loser();
+}
+
+void DurakEngine::play_round() {
+  open_phase();
+  toss_phase();
+  beat_phase();
+
+  auto view = rule_view();
+  k_round_end_rule_->apply(view);
+}
+
+void DurakEngine::open_phase() {
+  auto view = rule_view();
+  k_deal_rule_->apply(view);
+  (void)cycle_player(get_attacker(), k_open_actions_);
+}
+
+void DurakEngine::toss_phase() {
+  while (toss_cycle()) {}
+}
+
+void DurakEngine::beat_phase() {
+  while (beat_cycle()) {}
+}
+
+bool DurakEngine::is_game_over() const {
+  return std::ranges::count_if(players_, &Player::has_cards) <= 1;
+}
+
+void DurakEngine::define_loser() {
+  auto it = std::ranges::find_if(players_, &Player::has_cards);
+  last_game_result_ =
+      it != players_.end() ? GameResult{it->get_id()} : GameResult{};
+}
+
 Player& DurakEngine::get_player(modulo_t pos) {
   return players_.at(pos.as<std::size_t>());
 }
@@ -82,10 +99,13 @@ PlayerView DurakEngine::view_for(const Player& player) {
   return PlayerView{*this, player.get_id()};
 }
 
+GameRuleView DurakEngine::rule_view() { return GameRuleView{*this}; }
+
 void DurakEngine::apply_action(player_id_t id, action_id_t action_id,
                                const actions_t& actions) {
   if (actions.contains(action_id)) {
-    actions.at(action_id)->apply(id, *this);
+    auto view = rule_view();
+    actions.at(action_id)->apply(id, view);
   }
 }
 
@@ -110,21 +130,8 @@ bool DurakEngine::run_cycle(modulo_t start, const actions_t& actions,
   return acted;
 }
 
-void DurakEngine::open_phase() {
-  k_deal_rule_->apply(*this);
-  (void)cycle_player(get_attacker(), k_open_actions_);
-}
-
-void DurakEngine::toss_phase() {
-  while (toss_cycle()) {}
-}
-
 bool DurakEngine::toss_cycle() {
   return run_cycle(attacker_pos_, k_toss_actions_, defender_pos_);
-}
-
-void DurakEngine::beat_phase() {
-  while (beat_cycle()) {}
 }
 
 bool DurakEngine::beat_cycle() {

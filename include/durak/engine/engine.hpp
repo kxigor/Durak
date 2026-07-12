@@ -10,6 +10,7 @@
 #include "config.hpp"
 #include "engine_fwd.hpp"
 #include "game_rule.hpp"
+#include "game_rule_view.hpp"
 #include "modulo.hpp"
 #include "player.hpp"
 #include "player_action.hpp"
@@ -64,6 +65,7 @@ class DurakEngine {
  private:
   /*========================= Friends ==========================*/
   friend class PlayerView;
+  friend class GameRuleView;
 
   /*======================== Game Cycle ========================*/
   void game_cycle();
@@ -79,6 +81,7 @@ class DurakEngine {
   Player& get_attacker();
   Player& get_defender();
   PlayerView view_for(const Player& player);
+  GameRuleView rule_view();
   void apply_action(player_id_t id, action_id_t action_id,
                     const actions_t& actions);
   [[nodiscard]] bool cycle_player(Player& player, const actions_t& actions);
