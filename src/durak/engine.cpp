@@ -1,17 +1,18 @@
 #include <algorithm>
 #include <format>
+#include <stdexcept>
 #include <include/durak/engine/engine.hpp>
 
 namespace durak::engine {
 
 DurakEngine::DurakEngine(rule_t first_turn, modulo_base_t next_offset,
-                         rule_t deck_init, rule_t deal, rule_t round_end,
+                         rule_t deck_init, rule_t round_start, rule_t round_end,
                          actions_t open_actions, actions_t toss_actions,
                          actions_t beat_actions)
     : k_first_turn_rule_{std::move(first_turn)},
       k_next_offset_{std::move(next_offset)},
       k_deck_init_rule_{std::move(deck_init)},
-      k_deal_rule_{std::move(deal)},
+      k_round_start_rule_{std::move(round_start)},
       k_round_end_rule_{std::move(round_end)},
       k_open_actions_{std::move(open_actions)},
       k_toss_actions_{std::move(toss_actions)},
@@ -21,6 +22,16 @@ void DurakEngine::start(std::vector<Player> players) {
   game_status_.is_game_running_ = true;
   players_ = std::move(players);
   table_.clear();
+
+  // Seat positions on a ring sized to the player count. The offset must be
+  // coprime with that count, otherwise a walk would skip players.
+  auto count = static_cast<modulo_base_t>(players_.size());
+  attacker_pos_ = modulo_t{count};
+  defender_pos_ = modulo_t{count};
+  if (count > 0 && !attacker_pos_.covers_full_ring(k_next_offset_)) {
+    throw std::invalid_argument(
+        "next_offset must be coprime with the player count");
+  }
 
   auto view = rule_view();
   k_first_turn_rule_->apply(view);
@@ -55,18 +66,19 @@ void DurakEngine::game_cycle() {
 }
 
 void DurakEngine::play_round() {
+  auto view = rule_view();
+  // start rule must initialize defender
+  k_round_start_rule_->apply(view);
+
   open_phase();
   toss_phase();
   beat_phase();
 
-  auto view = rule_view();
   k_round_end_rule_->apply(view);
 }
 
 void DurakEngine::open_phase() {
-  auto view = rule_view();
-  k_deal_rule_->apply(view);
-  (void)cycle_player(get_attacker(), k_open_actions_);
+  cycle_player(get_attacker(), k_open_actions_);
 }
 
 void DurakEngine::toss_phase() {
@@ -95,10 +107,6 @@ Player& DurakEngine::get_attacker() { return get_player(attacker_pos_); }
 
 Player& DurakEngine::get_defender() { return get_player(defender_pos_); }
 
-PlayerView DurakEngine::view_for(const Player& player) {
-  return PlayerView{*this, player.get_id()};
-}
-
 GameRuleView DurakEngine::rule_view() { return GameRuleView{*this}; }
 
 void DurakEngine::apply_action(player_id_t id, action_id_t action_id,
@@ -111,7 +119,7 @@ void DurakEngine::apply_action(player_id_t id, action_id_t action_id,
 
 bool DurakEngine::cycle_player(Player& player, const actions_t& actions) {
   bool acted = false;
-  auto view = view_for(player);
+  PlayerView view{*this, player.get_id(), actions};
   while (const auto action_id = player.get_action(view)) {
     apply_action(player.get_id(), *action_id, actions);
     acted = true;

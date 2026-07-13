@@ -7,13 +7,15 @@
 #include "card.hpp"
 #include "config.hpp"
 #include "engine_fwd.hpp"
+#include "player_action.hpp"
 
 namespace durak::engine {
 
 class PlayerView {
  public:
   /*================= Constructors/Destructors =================*/
-  PlayerView(DurakEngine& engine, player_id_t player_id);
+  PlayerView(DurakEngine& engine, player_id_t player_id,
+             const actions_t& actions);
 
   /*========================= Getters ==========================*/
   std::vector<action_id_t> get_possible_actions() const;
@@ -28,6 +30,7 @@ class PlayerView {
   /*======================= Data fields ========================*/
   DurakEngine& engine_;
   player_id_t player_id_;
+  const actions_t& actions_;
 };
 
 }  // namespace durak::engine

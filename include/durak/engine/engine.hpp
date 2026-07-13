@@ -24,8 +24,6 @@ class DurakEngine {
   using modulo_t = modulo::ModuloRing<modulo_base_t>;
 
   using rule_t = std::unique_ptr<GameRule>;
-  using action_t = std::unique_ptr<PlayerAction>;
-  using actions_t = std::unordered_map<action_id_t, action_t>;
 
   struct GameStatus {
     bool is_game_running_{false};
@@ -38,7 +36,7 @@ class DurakEngine {
  public:
   /*================= Constructors/Destructors =================*/
   DurakEngine(rule_t first_turn, modulo_base_t next_offset, rule_t deck_init,
-              rule_t deal, rule_t round_end, actions_t open_actions,
+              rule_t round_start, rule_t round_end, actions_t open_actions,
               actions_t toss_actions, actions_t beat_actions);
 
   DurakEngine(const DurakEngine& /*unused*/) = delete;
@@ -66,6 +64,9 @@ class DurakEngine {
   /*========================= Friends ==========================*/
   friend class PlayerView;
   friend class GameRuleView;
+#ifdef UNIT_TESTING
+  friend class DurakEngineTestMediator;
+#endif
 
   /*======================== Game Cycle ========================*/
   void game_cycle();
@@ -80,11 +81,10 @@ class DurakEngine {
   Player& get_player(modulo_t pos);
   Player& get_attacker();
   Player& get_defender();
-  PlayerView view_for(const Player& player);
   GameRuleView rule_view();
   void apply_action(player_id_t id, action_id_t action_id,
                     const actions_t& actions);
-  [[nodiscard]] bool cycle_player(Player& player, const actions_t& actions);
+  bool cycle_player(Player& player, const actions_t& actions);
   [[nodiscard]] bool run_cycle(modulo_t start, const actions_t& actions,
                                std::optional<modulo_t> exclude = std::nullopt);
   [[nodiscard]] bool toss_cycle();
@@ -95,7 +95,7 @@ class DurakEngine {
   const rule_t k_first_turn_rule_{};
   const modulo_base_t k_next_offset_{};
   const rule_t k_deck_init_rule_{};
-  const rule_t k_deal_rule_{};
+  const rule_t k_round_start_rule_{};
   const rule_t k_round_end_rule_{};
 
   const actions_t k_open_actions_{};

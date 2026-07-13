@@ -1,13 +1,22 @@
 #include <include/durak/engine/engine.hpp>
+#include <include/durak/engine/game_rule_view.hpp>
 #include <include/durak/engine/player_view.hpp>
 
 namespace durak::engine {
 
-PlayerView::PlayerView(DurakEngine& engine, player_id_t player_id)
-    : engine_{engine}, player_id_{player_id} {}
+PlayerView::PlayerView(DurakEngine& engine, player_id_t player_id,
+                       const actions_t& actions)
+    : engine_{engine}, player_id_{player_id}, actions_{actions} {}
 
 std::vector<action_id_t> PlayerView::get_possible_actions() const {
-  return {};
+  std::vector<action_id_t> result;
+  GameRuleView view{engine_};
+  for (const auto& [id, action] : actions_) {
+    if (action->is_applicable(player_id_, view)) {
+      result.push_back(id);
+    }
+  }
+  return result;
 }
 
 std::size_t PlayerView::get_stock_size() const {

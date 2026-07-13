@@ -14,6 +14,16 @@ bool CardOnTable::is_beaten() const { return beat_card_.has_value(); }
 
 void Table::clear() { cards_.clear(); }
 
+void Table::add_attack(Card attack_card) {
+  cards_.emplace_back(attack_card);
+}
+
+void Table::beat(std::size_t index, Card beat_card) {
+  cards_.at(index).beat(beat_card);
+}
+
 const Table::cards_on_table_t& Table::get_cards() const { return cards_; }
+
+std::size_t Table::size() const { return cards_.size(); }
 
 }  // namespace durak::engine

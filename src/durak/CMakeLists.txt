@@ -17,3 +17,7 @@ target_include_directories(durak
   PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
 )
+
+if(MYPROJ_BUILD_TESTS)
+  target_compile_definitions(durak PUBLIC UNIT_TESTING)
+endif()

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <optional>
 #include <vector>
 
@@ -10,7 +11,7 @@ namespace durak::engine {
 class CardOnTable {
  public:
   /*================= Constructors/Destructors =================*/
-  CardOnTable(Card attack_card);
+  explicit CardOnTable(Card attack_card);
 
   CardOnTable(const CardOnTable& /*unused*/) = delete;
   CardOnTable(CardOnTable&& /*unused*/) = default;
@@ -56,9 +57,12 @@ class Table {
 
   /*======================== Modifiers =========================*/
   void clear();
+  void add_attack(Card attack_card);
+  void beat(std::size_t index, Card beat_card);
 
   /*========================= Getters ==========================*/
   const cards_on_table_t& get_cards() const;
+  std::size_t size() const;
 
  private:
   /*======================= Data fields ========================*/

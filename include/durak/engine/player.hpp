@@ -28,9 +28,11 @@ class Player {
   player_id_t get_id() const;
   std::size_t get_card_count() const;
   bool has_cards() const;
+  const std::vector<Card>& get_cards() const;
 
   /*======================== Modifiers =========================*/
   void add_card(Card card);
+  Card remove_card(std::size_t index);
 
   /*=========================== Game ===========================*/
   std::optional<action_id_t> get_action(const PlayerView& view) const;

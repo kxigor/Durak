@@ -1,5 +1,7 @@
 #pragma once
 
+#include <numeric>
+#include <stdexcept>
 #include <type_traits>
 
 namespace durak::modulo {
@@ -16,11 +18,7 @@ class ModuloRing {
 
   ModuloRing(num_t mod, num_t num)
       : mod_{std::move(mod)}, num_{std::move(num)} {
-    if (num_ < NumT{0}) {
-      num_ %= mod_;
-      num_ += mod_;
-    }
-    num_ %= mod_;
+    wrap();
   }
 
   ModuloRing(const ModuloRing& /*unused*/) = default;
@@ -36,16 +34,13 @@ class ModuloRing {
   /*=================== Arithmetic operators ===================*/
   ModuloRing& operator+=(const ModuloRing& rhs) {
     num_ += rhs.num_;
-    num_ %= mod_;
+    wrap();
     return *this;
   }
 
   ModuloRing& operator-=(const ModuloRing& rhs) {
-    if (num_ < rhs.num_) {
-      num_ += mod_;
-    }
     num_ -= rhs.num_;
-    num_ %= mod_;
+    wrap();
     return *this;
   }
 
@@ -68,6 +63,17 @@ class ModuloRing {
   /*========================== Fabric ==========================*/
   ModuloRing create(num_t num) const { return ModuloRing{mod_, num}; }
 
+  /*======================= Ring queries =======================*/
+  // A step generates the whole ring iff it is coprime with the modulus.
+  // Used at start-up to reject offsets that would skip players.
+  static num_t gcd(num_t a, num_t b) {
+    return static_cast<num_t>(std::gcd(a, b));
+  }
+
+  bool covers_full_ring(num_t step) const {
+    return mod_ != NumT{0} && gcd(step, mod_) == NumT{1};
+  }
+
   /*========================= Setters ==========================*/
   void set_num(num_t num) { num_ = std::move(num); }
 
@@ -86,6 +92,19 @@ class ModuloRing {
   }
 
  private:
+  /*========================= Helpers ==========================*/
+  // Normalizes num_ into [0, mod_) and guards against a zero modulus,
+  // which would make the modulo operation undefined.
+  void wrap() {
+    if (mod_ == NumT{0}) {
+      throw std::logic_error("ModuloRing: modulus must be non-zero");
+    }
+    num_ %= mod_;
+    if (num_ < NumT{0}) {
+      num_ += mod_;
+    }
+  }
+
   /*======================= Data fields ========================*/
   num_t mod_{};
   num_t num_{};
