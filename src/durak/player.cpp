@@ -20,8 +20,4 @@ Card Player::remove_card(std::size_t index) {
   return card;
 }
 
-std::optional<action_id_t> Player::get_action(const PlayerView& /*view*/) const {
-  return {};
-}
-
 }  // namespace durak::engine

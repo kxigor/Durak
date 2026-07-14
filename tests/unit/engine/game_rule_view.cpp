@@ -18,10 +18,7 @@ struct NullRule : GameRule {
   bool is_applicable(const GameRuleView& /*view*/) const override {
     return true;
   }
-  const std::string& get_name() const noexcept override {
-    static const std::string name{"null"};
-    return name;
-  }
+  rule_id_t get_id() const noexcept override { return 0; }
 };
 
 std::unique_ptr<GameRule> null_rule() { return std::make_unique<NullRule>(); }

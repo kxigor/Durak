@@ -19,10 +19,7 @@ struct NullRule : GameRule {
   bool is_applicable(const GameRuleView& /*view*/) const override {
     return true;
   }
-  const std::string& get_name() const noexcept override {
-    static const std::string name{"null"};
-    return name;
-  }
+  rule_id_t get_id() const noexcept override { return 0; }
 };
 
 // Gives every player a single card at deck init.
@@ -33,10 +30,7 @@ struct DealOneRule : GameRule {
   bool is_applicable(const GameRuleView& /*view*/) const override {
     return true;
   }
-  const std::string& get_name() const noexcept override {
-    static const std::string name{"deal-one"};
-    return name;
-  }
+  rule_id_t get_id() const noexcept override { return 1; }
 };
 
 // Empties the first player's hand — drives the game toward termination.
@@ -48,10 +42,7 @@ struct ClearFirstRule : GameRule {
   bool is_applicable(const GameRuleView& /*view*/) const override {
     return true;
   }
-  const std::string& get_name() const noexcept override {
-    static const std::string name{"clear-first"};
-    return name;
-  }
+  rule_id_t get_id() const noexcept override { return 2; }
 };
 
 std::unique_ptr<GameRule> null_rule() { return std::make_unique<NullRule>(); }

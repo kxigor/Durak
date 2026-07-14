@@ -15,14 +15,7 @@ class Player {
   /*================= Constructors/Destructors =================*/
   explicit Player(player_id_t id);
 
-  Player(const Player& /*unused*/) = delete;
-  Player(Player&& /*unused*/) = default;
-
-  ~Player() = default;
-
-  /*======================= Assignments ========================*/
-  Player& operator=(const Player& /*unused*/) = delete;
-  Player& operator=(Player&& /*unused*/) = default;
+  virtual ~Player() = default;
 
   /*========================= Getters ==========================*/
   player_id_t get_id() const;
@@ -35,7 +28,8 @@ class Player {
   Card remove_card(std::size_t index);
 
   /*=========================== Game ===========================*/
-  std::optional<action_id_t> get_action(const PlayerView& view) const;
+  virtual std::optional<action_id_t> get_action(
+      const PlayerView& view) const = 0;
 
  private:
   /*======================= Data fields ========================*/
