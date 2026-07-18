@@ -2,7 +2,6 @@
 
 #include <numeric>
 #include <stdexcept>
-#include <type_traits>
 
 namespace durak::modulo {
 
@@ -14,7 +13,7 @@ class ModuloRing {
   /*======================= Constructors =======================*/
   ModuloRing() = default;
 
-  explicit ModuloRing(num_t mod) : mod_{std::move(mod)} {}
+  explicit ModuloRing(num_t mod) noexcept : mod_{std::move(mod)} {}
 
   ModuloRing(num_t mod, num_t num)
       : mod_{std::move(mod)}, num_{std::move(num)} {
@@ -61,33 +60,36 @@ class ModuloRing {
   ModuloRing operator-(num_t rhs) const { return *this - create(rhs); }
 
   /*========================== Fabric ==========================*/
-  ModuloRing create(num_t num) const { return ModuloRing{mod_, num}; }
+  [[nodiscard]] ModuloRing create(num_t num) const {
+    return ModuloRing{mod_, num};
+  }
 
   /*======================= Ring queries =======================*/
   // A step generates the whole ring iff it is coprime with the modulus.
   // Used at start-up to reject offsets that would skip players.
-  static num_t gcd(num_t a, num_t b) {
+  static num_t gcd(num_t a, num_t b) noexcept {
     return static_cast<num_t>(std::gcd(a, b));
   }
 
-  bool covers_full_ring(num_t step) const {
+  [[nodiscard]] bool covers_full_ring(num_t step) const noexcept {
     return mod_ != NumT{0} && gcd(step, mod_) == NumT{1};
   }
 
   /*========================= Setters ==========================*/
-  void set_num(num_t num) { num_ = std::move(num); }
+  void set_num(num_t num) noexcept { num_ = std::move(num); }
 
-  void set_mod(num_t mod) { mod_ = std::move(mod); }
+  void set_mod(num_t mod) noexcept { mod_ = std::move(mod); }
 
   /*========================= Getters ==========================*/
-  const num_t& get_num() const { return num_; }
+  [[nodiscard]] const num_t& get_num() const noexcept { return num_; }
 
-  const num_t& get_mod() const { return mod_; }
+  [[nodiscard]] const num_t& get_mod() const noexcept { return mod_; }
 
-  operator num_t() const { return num_; }
+  // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+  operator num_t() const noexcept { return num_; }
 
   template <typename AsT>
-  AsT as() const {
+  [[nodiscard]] AsT as() const noexcept {
     return static_cast<AsT>(num_);
   }
 
@@ -99,9 +101,9 @@ class ModuloRing {
     if (mod_ == NumT{0}) {
       throw std::logic_error("ModuloRing: modulus must be non-zero");
     }
-    num_ %= mod_;
+    num_ = static_cast<num_t>(num_ % mod_);
     if (num_ < NumT{0}) {
-      num_ += mod_;
+      num_ = static_cast<num_t>(num_ + mod_);
     }
   }
 
@@ -110,4 +112,4 @@ class ModuloRing {
   num_t num_{};
 };
 
-};  // namespace durak::modulo
+}  // namespace durak::modulo

@@ -1,19 +1,17 @@
 #pragma once
 
-#include <cstdint>
 #include <memory>
 #include <optional>
-#include <string>
-#include <unordered_map>
 #include <vector>
 
+#include "action_rule.hpp"
+#include "card.hpp"
 #include "config.hpp"
 #include "engine_fwd.hpp"
 #include "game_rule.hpp"
 #include "game_rule_view.hpp"
 #include "modulo.hpp"
 #include "player.hpp"
-#include "player_action.hpp"
 #include "player_view.hpp"
 #include "table.hpp"
 
@@ -26,7 +24,7 @@ class DurakEngine {
   using rule_t = std::unique_ptr<GameRule>;
 
   struct GameStatus {
-    bool is_game_running_{false};
+    bool is_game_running{false};
   };
 
   struct GameResult {
@@ -49,16 +47,16 @@ class DurakEngine {
   DurakEngine& operator=(DurakEngine&& /*unused*/) = delete;
 
   /*====================== Game Lifetime =======================*/
-  void start(std::vector<Player> players);
+  void start(players_t players);
 
-  void end();
+  void end() noexcept;
 
   /*========================= Getters ==========================*/
-  const GameStatus& get_status() const;
+  const GameStatus& get_status() const noexcept;
 
-  modulo_base_t get_attacker_pos() const;
-  modulo_base_t get_defender_pos() const;
-  std::optional<GameResult> get_last_game_result() const;
+  modulo_base_t get_attacker_pos() const noexcept;
+  modulo_base_t get_defender_pos() const noexcept;
+  std::optional<GameResult> get_last_game_result() const noexcept;
 
  private:
   /*========================= Friends ==========================*/
@@ -74,16 +72,15 @@ class DurakEngine {
   void open_phase();
   void toss_phase();
   void beat_phase();
-  bool is_game_over() const;
-  void define_loser();
+  bool is_game_over() const noexcept;
+  void define_loser() noexcept;
 
   /*========================= Helpers ==========================*/
   Player& get_player(modulo_t pos);
   Player& get_attacker();
   Player& get_defender();
-  GameRuleView rule_view();
-  void apply_action(player_id_t id, action_id_t action_id,
-                    const actions_t& actions);
+  GameRuleView rule_view() noexcept;
+  void apply_action(player_id_t id, const Move& move, const actions_t& actions);
   bool cycle_player(Player& player, const actions_t& actions);
   [[nodiscard]] bool run_cycle(modulo_t start, const actions_t& actions,
                                std::optional<modulo_t> exclude = std::nullopt);
@@ -105,7 +102,7 @@ class DurakEngine {
   /*======================= Game Process =======================*/
   GameStatus game_status_{};
 
-  std::vector<Player> players_{};
+  players_t players_{};
 
   Table table_{};
 
@@ -119,4 +116,4 @@ class DurakEngine {
   std::optional<GameResult> last_game_result_{};
 };
 
-};  // namespace durak::engine
+}  // namespace durak::engine

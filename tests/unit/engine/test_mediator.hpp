@@ -6,10 +6,9 @@
 #error "test_mediator.hpp requires the UNIT_TESTING build"
 #endif
 
+#include <include/durak/engine/engine.hpp>
 #include <optional>
 #include <vector>
-
-#include <include/durak/engine/engine.hpp>
 
 namespace durak::engine {
 
@@ -18,7 +17,7 @@ class DurakEngineTestMediator {
   explicit DurakEngineTestMediator(DurakEngine& engine) : engine_{engine} {}
 
   /*======================= State access =======================*/
-  std::vector<Player>& players() { return engine_.players_; }
+  players_t& players() { return engine_.players_; }
   std::vector<Card>& stock() { return engine_.stock_; }
   std::vector<Card>& bita() { return engine_.bita_; }
   Card& trump() { return engine_.trump_; }
@@ -43,10 +42,19 @@ class DurakEngineTestMediator {
   player_id_t player_at(modulo_base_t pos) {
     return engine_.get_player(DurakEngine::modulo_t{count(), pos}).get_id();
   }
+  player_id_t attacker_id() { return engine_.get_attacker().get_id(); }
+  player_id_t defender_id() { return engine_.get_defender().get_id(); }
   bool is_game_over() const { return engine_.is_game_over(); }
   void define_loser() { engine_.define_loser(); }
   void game_cycle() { engine_.game_cycle(); }
   void play_round() { engine_.play_round(); }
+  bool cycle_player(Player& player, const actions_t& actions) {
+    return engine_.cycle_player(player, actions);
+  }
+  void apply_action(player_id_t id, const Move& move,
+                    const actions_t& actions) {
+    engine_.apply_action(id, move, actions);
+  }
 
  private:
   modulo_base_t count() const {

@@ -1,9 +1,8 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
-#include <stdexcept>
-
 #include <include/durak/engine/modulo.hpp>
+#include <stdexcept>
 
 namespace {
 

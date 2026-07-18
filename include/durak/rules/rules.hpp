@@ -14,4 +14,4 @@ enum class DeckSize : std::uint8_t {
 };
 // clang-format on
 
-};
+}  // namespace durak

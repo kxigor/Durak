@@ -1,25 +1,33 @@
 #include <gtest/gtest.h>
 
-#include <stdexcept>
-
 #include <include/durak/engine/player.hpp>
+#include <stdexcept>
 
 namespace {
 
 using durak::engine::Card;
+using durak::engine::move_t;
 using durak::engine::Player;
+using durak::engine::PlayerView;
+
+struct StubPlayer : Player {
+  using Player::Player;
+  move_t get_action(const PlayerView& /*view*/) const override {
+    return nullptr;
+  }
+};
 
 // --- Identity ---
 
 TEST(PlayerTest, KeepsItsId) {
-  Player p{42};
+  StubPlayer p{42};
   EXPECT_EQ(p.get_id(), 42u);
 }
 
 // --- Empty hand ---
 
 TEST(PlayerTest, StartsWithNoCards) {
-  Player p{1};
+  StubPlayer p{1};
   EXPECT_EQ(p.get_card_count(), 0u);
   EXPECT_FALSE(p.has_cards());
   EXPECT_TRUE(p.get_cards().empty());
@@ -28,7 +36,7 @@ TEST(PlayerTest, StartsWithNoCards) {
 // --- Adding cards ---
 
 TEST(PlayerTest, AddCardGrowsHand) {
-  Player p{1};
+  StubPlayer p{1};
   p.add_card(Card{5});
   p.add_card(Card{6});
   EXPECT_EQ(p.get_card_count(), 2u);
@@ -40,7 +48,7 @@ TEST(PlayerTest, AddCardGrowsHand) {
 // --- Removing cards ---
 
 TEST(PlayerTest, RemoveCardReturnsAndShrinks) {
-  Player p{1};
+  StubPlayer p{1};
   p.add_card(Card{5});
   p.add_card(Card{6});
   Card taken = p.remove_card(0);
@@ -50,7 +58,7 @@ TEST(PlayerTest, RemoveCardReturnsAndShrinks) {
 }
 
 TEST(PlayerTest, RemoveOutOfRangeThrows) {
-  Player p{1};
+  StubPlayer p{1};
   EXPECT_THROW((void)p.remove_card(0), std::out_of_range);
 }
 

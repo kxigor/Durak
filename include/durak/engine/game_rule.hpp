@@ -7,13 +7,20 @@ namespace durak::engine {
 
 class GameRule {
  public:
-  /*======================= Destructors ========================*/
+  /*================= Constructors/Destructors =================*/
+  GameRule() = default;
+  GameRule(const GameRule& /*unused*/) = delete;
+  GameRule(GameRule&& /*unused*/) = delete;
   virtual ~GameRule() = default;
+
+  /*======================= Assignments ========================*/
+  GameRule& operator=(const GameRule& /*unused*/) = delete;
+  GameRule& operator=(GameRule&& /*unused*/) = delete;
 
   /*========================= Game API =========================*/
   virtual void apply(GameRuleView& view) = 0;
-  virtual bool is_applicable(const GameRuleView& view) const = 0;
-  virtual rule_id_t get_id() const noexcept = 0;
+  [[nodiscard]] virtual bool is_applicable(const GameRuleView& view) const = 0;
+  [[nodiscard]] virtual rule_id_t get_id() const noexcept = 0;
 };
 
 }  // namespace durak::engine

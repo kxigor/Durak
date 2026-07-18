@@ -1,9 +1,8 @@
 #include <gtest/gtest.h>
 
+#include <include/durak/engine/table.hpp>
 #include <optional>
 #include <stdexcept>
-
-#include <include/durak/engine/table.hpp>
 
 namespace {
 

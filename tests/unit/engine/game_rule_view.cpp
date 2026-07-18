@@ -1,11 +1,10 @@
 #include <gtest/gtest.h>
 
+#include <include/durak/engine/engine.hpp>
+#include <include/durak/engine/game_rule_view.hpp>
 #include <memory>
 #include <optional>
 #include <string>
-
-#include <include/durak/engine/engine.hpp>
-#include <include/durak/engine/game_rule_view.hpp>
 
 #include "test_mediator.hpp"
 
@@ -22,6 +21,13 @@ struct NullRule : GameRule {
 };
 
 std::unique_ptr<GameRule> null_rule() { return std::make_unique<NullRule>(); }
+
+struct StubPlayer : Player {
+  using Player::Player;
+  move_t get_action(const PlayerView& /*view*/) const override {
+    return nullptr;
+  }
+};
 
 struct GameRuleViewTest : ::testing::Test {
   DurakEngine engine{null_rule(), 1,  null_rule(), null_rule(),
@@ -68,18 +74,18 @@ TEST_F(GameRuleViewTest, TableRoundTrip) {
 // --- Players ---
 
 TEST_F(GameRuleViewTest, PlayersRoundTrip) {
-  view.players().push_back(Player{7});
+  view.players().push_back(std::make_unique<StubPlayer>(7));
   const GameRuleView& cview = view;
   EXPECT_EQ(cview.players().size(), 1u);
-  EXPECT_EQ(cview.players()[0].get_id(), 7u);
+  EXPECT_EQ(cview.players()[0]->get_id(), 7u);
 }
 
 // --- Positions ---
 
 TEST_F(GameRuleViewTest, PositionsRoundTrip) {
-  view.players().push_back(Player{1});
-  view.players().push_back(Player{2});
-  view.players().push_back(Player{3});
+  view.players().push_back(std::make_unique<StubPlayer>(1));
+  view.players().push_back(std::make_unique<StubPlayer>(2));
+  view.players().push_back(std::make_unique<StubPlayer>(3));
   view.set_attacker_pos(1);
   view.set_defender_pos(2);
   EXPECT_EQ(view.get_attacker_pos(), 1);
