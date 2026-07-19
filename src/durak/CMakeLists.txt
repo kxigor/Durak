@@ -1,10 +1,7 @@
-add_library(durak
-  engine.cpp
-  table.cpp
-  player.cpp
-  player_view.cpp
-  game_rule_view.cpp
-)
+add_library(durak)
+
+add_subdirectory(engine)
+add_subdirectory(rules)
 
 target_link_libraries(durak
   PRIVATE

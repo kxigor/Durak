@@ -1,17 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <include/durak/engine/game_rule.hpp>
 
-namespace durak {
+namespace durak::rules {
 
-// clang-format off
-enum class DeckSize : std::uint8_t {
-    Piquet      = 24,
-    Skat        = 32,
-    ThirtySix   = 36,
-    Standard    = 52,
-    WithJokers  = 54
-};
-// clang-format on
-
-}  // namespace durak
+}  // namespace durak::rules

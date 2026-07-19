@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "config.hpp"
 #include "engine_fwd.hpp"
 
@@ -22,5 +24,7 @@ class GameRule {
   [[nodiscard]] virtual bool is_applicable(const GameRuleView& view) const = 0;
   [[nodiscard]] virtual rule_id_t get_id() const noexcept = 0;
 };
+
+using rule_t = std::unique_ptr<GameRule>;
 
 }  // namespace durak::engine

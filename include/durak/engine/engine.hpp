@@ -21,8 +21,6 @@ class DurakEngine {
   /*====================== Usings/Helpers ======================*/
   using modulo_t = modulo::ModuloRing<modulo_base_t>;
 
-  using rule_t = std::unique_ptr<GameRule>;
-
   struct GameStatus {
     bool is_game_running{false};
   };
