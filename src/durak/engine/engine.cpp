@@ -3,6 +3,7 @@
 #include <include/durak/engine/action_rule.hpp>
 #include <include/durak/engine/config.hpp>
 #include <include/durak/engine/engine.hpp>
+#include <include/durak/engine/game_rule.hpp>
 #include <include/durak/engine/game_rule_view.hpp>
 #include <include/durak/engine/move.hpp>
 #include <include/durak/engine/player.hpp>
@@ -144,9 +145,9 @@ void DurakEngine::apply_action(player_id_t id, const Move& move,
 
 bool DurakEngine::cycle_player(Player& player, const actions_t& actions) {
   bool acted = false;
-  const PlayerView view{*this, player.get_id(), actions};
-  while (const auto move = player.get_action(view)) {
-    apply_action(player.get_id(), *move, actions);
+  const PlayerView kView{*this, player.get_id(), actions};
+  while (const auto kMove = player.get_action(kView)) {
+    apply_action(player.get_id(), *kMove, actions);
     acted = true;
   }
   return acted;

@@ -28,8 +28,8 @@ bool PlayerView::is_available(action_id_t action_id) const {
   if (it == actions_.end()) {
     return false;
   }
-  const GameRuleView view{engine_};
-  return it->second->is_available(player_id_, view);
+  const GameRuleView kView{engine_};
+  return it->second->is_available(player_id_, kView);
 }
 
 bool PlayerView::is_legal(const Move& move) const {
@@ -37,8 +37,8 @@ bool PlayerView::is_legal(const Move& move) const {
   if (it == actions_.end()) {
     return false;
   }
-  const GameRuleView view{engine_};
-  return it->second->is_legal(player_id_, move, view);
+  const GameRuleView kView{engine_};
+  return it->second->is_legal(player_id_, move, kView);
 }
 
 std::size_t PlayerView::get_stock_size() const noexcept {

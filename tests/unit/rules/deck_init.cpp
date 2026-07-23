@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <include/durak/engine/engine.hpp>
 #include <include/durak/engine/game_rule_view.hpp>
 #include <include/durak/rules/deck_init.hpp>
@@ -76,9 +77,14 @@ TEST(DeckInitRuleTest, ReportsItsId) {
 }
 
 TEST(DeckInitRuleTest, MakeBuildsRule) {
-  auto rule = DeckInitRule::make(DeckSize::Standard);
+  auto rule = DeckInitRule::make(deck::kStandard);
   ASSERT_TRUE(rule);
   EXPECT_EQ(rule->get_id(), 1u);
+}
+
+TEST(DeckInitRuleTest, RejectsInvalidDeckKind) {
+  EXPECT_THROW(DeckInitRule(DeckKind{static_cast<Rank>(1)}),
+               std::invalid_argument);
 }
 
 // --- DeckInitRule::apply ---
@@ -88,22 +94,34 @@ TEST_F(DeckInitTest, ApplicableOnAnyView) {
   EXPECT_TRUE(rule.is_applicable(view));
 }
 
-TEST_F(DeckInitTest, ApplyDealsEveryIdOnceForEachDeckSize) {
-  for (auto size : {DeckSize::Piquet, DeckSize::Skat, DeckSize::ThirtySix,
-                    DeckSize::Standard, DeckSize::WithJokers}) {
-    DeckInitRule rule{size, 42};
+TEST_F(DeckInitTest, ApplyDealsEveryIdOnceForEachDeckKind) {
+  for (auto kind : {deck::kPiquet, deck::kSkat, deck::kThirtySix,
+                    deck::kStandard, deck::kJokers}) {
+    DeckInitRule rule{kind, 42};
     rule.apply(view);
 
     auto ids = ids_of(view.stock());
     std::ranges::sort(ids);
-    std::vector<card_id_t> expected(static_cast<std::size_t>(size));
-    std::iota(expected.begin(), expected.end(), card_id_t{0});
+
+    // Cards run from the deck's lowest rank up to the Ace (ids [lo, 52)),
+    // followed by the two jokers when present.
+    const auto kLo = static_cast<card_id_t>(
+        (static_cast<std::uint32_t>(kind.lowest) - CardFace::kMinRank)
+        << CardFace::kRankShift);
+    std::vector<card_id_t> expected;
+    for (card_id_t id = kLo; id < 52; ++id) expected.push_back(id);
+    if (kind.jokers) {
+      expected.push_back(52);
+      expected.push_back(53);
+    }
+
+    EXPECT_EQ(ids.size(), kind.size());
     EXPECT_EQ(ids, expected);
   }
 }
 
 TEST_F(DeckInitTest, ApplyShufflesStock) {
-  DeckInitRule rule{DeckSize::ThirtySix, 42};
+  DeckInitRule rule{deck::kThirtySix, 42};
   rule.apply(view);
   auto shuffled = ids_of(view.stock());
 
@@ -113,18 +131,18 @@ TEST_F(DeckInitTest, ApplyShufflesStock) {
 }
 
 TEST_F(DeckInitTest, ApplySameSeedReproducesOrder) {
-  DeckInitRule first{DeckSize::ThirtySix, 7};
+  DeckInitRule first{deck::kThirtySix, 7};
   first.apply(view);
   auto first_ids = ids_of(view.stock());
 
-  DeckInitRule second{DeckSize::ThirtySix, 7};
+  DeckInitRule second{deck::kThirtySix, 7};
   second.apply(view);
   EXPECT_EQ(ids_of(view.stock()), first_ids);
 }
 
 TEST_F(DeckInitTest, ApplyReplacesPreviousStock) {
   view.stock().push_back(Card{999});
-  DeckInitRule rule{DeckSize::ThirtySix, 42};
+  DeckInitRule rule{deck::kThirtySix, 42};
   rule.apply(view);
 
   ASSERT_EQ(view.stock().size(), 36u);

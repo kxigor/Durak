@@ -4,32 +4,29 @@
 #include <include/durak/engine/engine_fwd.hpp>
 #include <include/durak/engine/game_rule.hpp>
 #include <random>
-#include <vector>
 
 #include "card_face.hpp"
 
 namespace durak::rules {
-class DeckInitRule : public engine::GameRule {
-  static constexpr engine::rule_id_t kRuleId = 1;
+class FirstTurnRule : public engine::GameRule {
+  static constexpr engine::rule_id_t kRuleId = 2;
 
  public:
   /*================= Constructors/Destructors =================*/
-  explicit DeckInitRule(
+  explicit FirstTurnRule(
       DeckKind kind = deck::kThirtySix,
       std::mt19937::result_type seed = std::random_device{}());
 
-  DeckInitRule(const DeckInitRule& /*unused*/) = default;
-  DeckInitRule(DeckInitRule&& /*unused*/) = default;
-  ~DeckInitRule() override = default;
+  FirstTurnRule(const FirstTurnRule& /*unused*/) = default;
+  FirstTurnRule(FirstTurnRule&& /*unused*/) = default;
+  ~FirstTurnRule() override = default;
 
   /*======================= Assignments ========================*/
-  DeckInitRule& operator=(const DeckInitRule& /*unused*/) = default;
-  DeckInitRule& operator=(DeckInitRule&& /*unused*/) = default;
+  FirstTurnRule& operator=(const FirstTurnRule& /*unused*/) = default;
+  FirstTurnRule& operator=(FirstTurnRule&& /*unused*/) = default;
 
   /*========================== Fabric ==========================*/
-  [[nodiscard]] static engine::rule_t make(
-      DeckKind kind = deck::kThirtySix,
-      std::mt19937::result_type seed = std::random_device{}());
+  [[nodiscard]] static engine::rule_t make();
 
   /*================= Interface Implementation =================*/
   void apply(engine::GameRuleView& view) override;
@@ -38,14 +35,8 @@ class DeckInitRule : public engine::GameRule {
   [[nodiscard]] engine::rule_id_t get_id() const noexcept override;
 
  private:
-  /*========================= Helpers ==========================*/
-  void init_stock(std::vector<engine::Card>& stock);
-  static void init_bita(std::vector<engine::Card>& bita);
-  static void init_trump(std::vector<engine::Card>& stock, engine::Card& trump);
-
   /*======================= Data fields ========================*/
   const DeckKind kind_{};
   std::mt19937 gen_;
 };
-
 }  // namespace durak::rules

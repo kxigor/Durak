@@ -7,4 +7,5 @@ class PlayerView;
 class Player;
 class Table;
 class Move;
+struct Card;
 }  // namespace durak::engine
