@@ -1,25 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
-# =========================================================
-# RENAMING THIS TEMPLATE
-# =========================================================
-# Search & replace the two placeholder tokens in this repository:
-#
-#   cpp-project-template  →  your-project-name        (used in project() and paths)
-#   MYPROJ                →  YOUR_PROJECT_UPPER       (option/cache prefix, uppercase)
-#
-# Files touched: CMakeLists.txt, CMakePresets.json, tests/CMakeLists.txt,
-#                tests/static/CMakeLists.txt, cmake/ProjectCoverage.cmake,
-#                README.md.
-#
-# A one-liner if you trust sed (run from the repo root):
-#   NEW=myproject; NEW_UPPER=$(echo "$NEW" | tr 'a-z-' 'A-Z_'); \
-#     git ls-files | xargs sed -i \
-#       -e "s/cpp-project-template/$NEW/g" \
-#       -e "s/MYPROJ_/${NEW_UPPER}_/g"
-# =========================================================
-
-project(cpp-project-template LANGUAGES CXX) # TODO: your project name
+project(durak LANGUAGES CXX)
 
 # =========================================================
 # 0. STANDALONE vs SUBPROJECT
@@ -30,25 +11,25 @@ project(cpp-project-template LANGUAGES CXX) # TODO: your project name
 # default.
 
 if(PROJECT_IS_TOP_LEVEL)
-  set(MYPROJ_DEV_DEFAULT ON)
+  set(DURAK_DEV_DEFAULT ON)
 else()
-  set(MYPROJ_DEV_DEFAULT OFF)
+  set(DURAK_DEV_DEFAULT OFF)
 endif()
 
 # =========================================================
-# 1. OPTIONS (prefix with MYPROJ_ — rename to keep the cache name unique)
+# 1. OPTIONS (prefix with DURAK_ — rename to keep the cache name unique)
 # =========================================================
-option(MYPROJ_BUILD_APP           "Build the example app"             ${MYPROJ_DEV_DEFAULT})
-option(MYPROJ_BUILD_TESTS         "Build the GTest test suite"        ${MYPROJ_DEV_DEFAULT})
-option(MYPROJ_ENABLE_FORMAT_CHECK "Register clang-format as CTest"    ${MYPROJ_DEV_DEFAULT})
-option(MYPROJ_ENABLE_TIDY_CHECK   "Register clang-tidy as CTest"      ${MYPROJ_DEV_DEFAULT})
-option(MYPROJ_ENABLE_COVERAGE     "Enable gcov/lcov coverage targets" OFF)
+option(DURAK_BUILD_APP           "Build the example app"             ${DURAK_DEV_DEFAULT})
+option(DURAK_BUILD_TESTS         "Build the GTest test suite"        ${DURAK_DEV_DEFAULT})
+option(DURAK_ENABLE_FORMAT_CHECK "Register clang-format as CTest"    ${DURAK_DEV_DEFAULT})
+option(DURAK_ENABLE_TIDY_CHECK   "Register clang-tidy as CTest"      ${DURAK_DEV_DEFAULT})
+option(DURAK_ENABLE_COVERAGE     "Enable gcov/lcov coverage targets" OFF)
 
 # Format/tidy/coverage only make sense alongside tests.
-if(NOT MYPROJ_BUILD_TESTS)
-  set(MYPROJ_ENABLE_FORMAT_CHECK OFF CACHE BOOL "Disabled: requires MYPROJ_BUILD_TESTS=ON" FORCE)
-  set(MYPROJ_ENABLE_TIDY_CHECK   OFF CACHE BOOL "Disabled: requires MYPROJ_BUILD_TESTS=ON" FORCE)
-  set(MYPROJ_ENABLE_COVERAGE     OFF CACHE BOOL "Disabled: requires MYPROJ_BUILD_TESTS=ON" FORCE)
+if(NOT DURAK_BUILD_TESTS)
+  set(DURAK_ENABLE_FORMAT_CHECK OFF CACHE BOOL "Disabled: requires DURAK_BUILD_TESTS=ON" FORCE)
+  set(DURAK_ENABLE_TIDY_CHECK   OFF CACHE BOOL "Disabled: requires DURAK_BUILD_TESTS=ON" FORCE)
+  set(DURAK_ENABLE_COVERAGE     OFF CACHE BOOL "Disabled: requires DURAK_BUILD_TESTS=ON" FORCE)
 endif()
 
 # =========================================================
@@ -75,18 +56,18 @@ add_subdirectory(src)
 # =========================================================
 # 4. DEV-ONLY MACHINERY (skipped for subproject consumers)
 # =========================================================
-if(MYPROJ_BUILD_APP OR MYPROJ_BUILD_TESTS OR MYPROJ_ENABLE_COVERAGE)
+if(DURAK_BUILD_APP OR DURAK_BUILD_TESTS OR DURAK_ENABLE_COVERAGE)
   list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
   include(ProjectOptions)
   include(ProjectSanitizers)
   include(ProjectCoverage)
 endif()
 
-if(MYPROJ_BUILD_APP)
+if(DURAK_BUILD_APP)
   add_subdirectory(app)
 endif()
 
-if(MYPROJ_BUILD_TESTS)
+if(DURAK_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
 endif()

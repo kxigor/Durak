@@ -1,248 +1,154 @@
-# Modern C++ Project Template
+# Durak
 
-This repository serves as a robust foundation for C++ projects, configured for the modern **C++23** standard. It features a pre-configured CMake build system, integration with code sanitizers, static analysis, code formatting, and comprehensive testing tools.
+A game engine for **Durak** (подкидной дурак), written in modern **C++23**. The engine is
+rule-driven: the flow of a game is expressed as small, injectable rule objects rather than
+hard-coded logic, which keeps the core engine deterministic and the game variants pluggable.
 
-## Features at a Glance
+> Status: the engine core and the setup/round rules are implemented and unit-tested. The
+> per-move action rules (attack / toss / beat) and AI players are the next milestone — see
+> [Roadmap](#roadmap).
 
-* **Standard:** C++23 required.
-* **Build System:** Uses `CMakePresets.json` for streamlined, repeatable configuration across different environments.
-* **Code Safety (Sanitizers):** Seamless integration with Clang/GCC Sanitizers (Address, Thread, Memory, Undefined).
-* **Code Quality:**
-  * Strict compiler warnings enforced via `cmake/ProjectOptions.cmake`.
-  * Automatic formatting check (`clang-format`).
-  * Static analysis (`clang-tidy`).
-* **Testing:** Integrated unit testing using Google Test (GTest).
-* **Code Coverage:** Integrated LCOV/GCOV generation.
+## Architecture
+
+The engine never decides *what* the rules of Durak are; it only decides *when* to ask a rule to
+act. All game logic lives in rule objects that mutate the board through a narrow view.
+
+### Building blocks
+
+| Component | Responsibility |
+|:---|:---|
+| `DurakEngine` | Owns the board (players, stock, bita, trump, table, seating) and runs the game loop. Rules and action sets are injected via its constructor. |
+| `GameRule` | A phase rule: `apply(GameRuleView&)` mutates the board at a lifecycle point (deck init, first turn, round start/end). |
+| `ActionRule` | A player-move rule: `is_available` (verb usable now) + `is_legal` (this operand allowed) + `apply`. Grouped into open / toss / beat action sets. |
+| `Move` | A polymorphic, engine-opaque player move carrying its `action_id`; concrete moves live in the rules layer and are validated by their `ActionRule`. |
+| `GameRuleView` | The read/write handle a `GameRule` gets: `players()`, `table()`, `stock()`, `bita()`, `trump()`, attacker/defender positions, `advance_seat()`. |
+| `PlayerView` | The read-only handle a `Player` gets to decide a move (visible counts, trump, positions, offset, legal actions). |
+| `Player` | Abstract holder of a hand; `get_action(PlayerView) -> move_t` (`nullptr` = pass). |
+| `Table` / `CardOnTable` | The cards in play this bout: each attack card plus an optional beat card (`is_beaten()`). |
+| `Card` / `CardFace` | `Card` is an opaque `card_id`; `CardFace` encodes/decodes it into `Suit` + `Rank`. |
+| `ModuloRing` | Seating arithmetic on a ring sized to the player count; `next_offset` must be coprime with it. |
+
+### Roles and seating
+
+Attacker and defender are **positions** on the seating ring, not flags on a player. Only rules
+move them, through `GameRuleView::set_attacker_pos` / `set_defender_pos`. The handoff is split so
+each rule owns one decision:
+
+- `FirstTurnRule` sets the **opening attacker**.
+- `RoundStartRule` derives the **defender** (next active seat after the attacker) each round.
+- `RoundEndRule` sets the **next attacker** based on the bout's outcome.
+
+### Game lifecycle
+
+```
+start(players)
+  ├─ DeckInitRule      build + shuffle stock, reveal trump (bottom card)
+  ├─ FirstTurnRule     deal 6 to each player, pick opening attacker (lowest trump)
+  └─ game loop  ── while more than one player holds cards ──
+        ├─ RoundStartRule   defender := next active seat after attacker
+        ├─ open  phase      attacker plays
+        ├─ toss  phase       everyone but the defender may toss
+        ├─ beat  phase       defender beats or gives up
+        └─ RoundEndRule     resolve table (beaten → bita, else defender takes all)
+                            → refill hands to 6 (attacker first, defender last)
+                            → next attacker (defended → defender; taken → skip defender)
+  └─ loser = the last player still holding cards (the "durak")
+```
+
+### The implemented rules
+
+| Rule | id | Job |
+|:---|:--:|:---|
+| `DeckInitRule` | 1 | Build the stock for the chosen `DeckKind`, shuffle, reveal the trump (the bottom card; cards are drawn from the top). |
+| `FirstTurnRule` | 2 | Deal `kHandSize` (6) cards to every player, then set the opening attacker to the holder of the lowest trump. |
+| `RoundStartRule` | 3 | Set the defender to the next card-holding seat after the attacker. |
+| `RoundEndRule` | 4 | Sweep the table (all beaten → *bita*, otherwise the defender picks everything up), refill hands to 6, then advance the attacker. |
+
+A `DeckKind` (`include/durak/rules/card_face.hpp`) captures a deck by its **lowest rank** (the
+top is always the Ace) plus a jokers flag; the card count follows from that. Presets:
+`deck::kPiquet` (24), `deck::kSkat` (32), `deck::kThirtySix` (36, default), `deck::kStandard`
+(52), `deck::kJokers` (54).
+
+## Project layout
+
+```
+include/durak/
+  engine/        core: engine, game_rule, action_rule, move, game_rule_view,
+                 player, player_view, table, card, modulo, config
+  rules/         card_face, deck_init, first_turn, round_start, round_end,
+                 turn_order, game_constants
+  ui/cli/        cli.hpp (placeholder for a future CLI front-end)
+src/durak/       engine/ and rules/ implementations
+app/main.cpp     minimal driver wiring the engine together
+tests/unit/      basic/ · engine/ · rules/  (GTest)
+cmake/           ProjectOptions, Sanitizers, Coverage, Format/Tidy tooling
+```
+
+## Conventions
+
+- **C++23**, warnings-as-errors, and a strict `clang-tidy` profile (`.clang-tidy`) enforced as a
+  build-gating CTest test.
+- Naming is `snake_case`, with **constants in `k`+CamelCase** — including `const` value locals
+  (`kRuleId`, `kHandSize`, `kLo`). `const` *reference* locals stay `snake_case`.
+- Code carries no incidental comments; structure is expressed through small, named helpers.
 
 ## Prerequisites
-To fully utilize this project, you will need the following tools installed:
-* **CMake** (version 3.25 or higher)
-* **C++ Compiler** with C++23 support (GCC 13+, Clang 16+, or MSVC)
-* **Ninja** (Recommended generator, specified in the presets)
-* **LLVM Utilities:** `clang-format`, `clang-tidy`
-* **Coverage Tools:** `gcov`, `lcov`, and `genhtml` (required for coverage reports).
 
-## Building and Running
+- **CMake** ≥ 3.25 and **Ninja**
+- A **C++23** compiler (GCC 14+ / Clang 18+)
+- **LLVM tools**: `clang-format`, `clang-tidy` (for the QA checks)
+- **Coverage** (optional): `gcov`, `lcov`, `genhtml`
 
-The project heavily relies on **CMake Presets** defined in `CMakePresets.json`.
+## Build and run
 
-### 1. View Available Presets
-To see all available configurations:
-```shell
-cmake --list-presets
-```
+The build is driven by `CMakePresets.json`. List everything with `cmake --list-presets`.
 
-### 2. Standard Development and Debugging
-The most common scenario is a Debug build with the **Address Sanitizer (ASan)** enabled to catch memory leaks and access violations.
-
-| Configuration | Command | Description |
-|:---|:---|:---|
-| **Configure** | `cmake --preset dev-debug-asan` | Configures a Debug build with ASan enabled. |
-| **Build** | `cmake --build --preset dev-debug-asan` | Builds all targets (app, tests) in the ASan configuration. |
-| **Run Executable** | `./build/dev-debug-asan/app/app` | Executes the main application. |
-
-### 3. Using Sanitizer Profiles
-The template includes specialized profiles for debugging various issues.
-
-| Preset Name | Sanitizer | Compiler Flags Added | Purpose |
-|:---|:---|:---|:---|
-| `dev-debug-asan` | Address Sanitizer | `-fsanitize=address` | Memory errors, leaks, use-after-free. |
-| `dev-debug-tsan` | Thread Sanitizer | `-fsanitize=thread` | Data races and deadlocks in concurrent code. |
-| `dev-debug-msan` | Memory Sanitizer | `-fsanitize=memory` | Checks for uninitialized reads (special setup required). |
-| `dev-debug-ubsan` | Undefined Behavior Sanitizer | `-fsanitize=undefined` | Integer overflows, unaligned loads, null pointer references. |
-
-### 4. Release Build (CI / Production)
-For maximum performance (no sanitizers, optimized compilation):
-
-| Configuration | Command | Description |
-|:---|:---|:---|
-| **Configure** | `cmake --preset ci-release` | Configures a Release build (`-O3 -DNDEBUG`). |
-| **Build** | `cmake --build --preset ci-release` | Builds all targets with optimizations. |
-
-## Testing and Quality Checks
-Tests and quality checks are managed using CTest, allowing them to be run across any configuration profile.
-
-### 1. Running Unit Tests (GTest)
-Unit tests are linked against the `project_coverage` target, so they generate coverage data when compiled with the `ci-coverage` preset, and they use the selected sanitizer in `dev-debug-*` presets.
-
-**Run tests in the ASan configuration:**
+The default development preset is a Debug build with the **Address Sanitizer**:
 
 ```shell
-# Configure and build first
 cmake --preset dev-debug-asan
 cmake --build --preset dev-debug-asan
-
-# Run all tests linked to ASan
-ctest --preset dev-debug-asan
+./build/dev-debug-asan/app/durak_app
 ```
 
-**Running specific tests:**
+Other sanitizer presets: `dev-debug-tsan` (threads), `dev-debug-msan` (uninitialized reads),
+`dev-debug-ubsan` (undefined behavior). For an optimized build use `cmake --preset ci-release`.
 
-You can use CTest's regular expression filtering:
+## Testing and quality
+
+`ctest` runs the format check, the tidy check, and every unit suite together — so a green
+`ctest` means formatted, lint-clean, and passing:
 
 ```shell
-# Run all tests
+cmake --preset dev-debug-asan
+cmake --build --preset dev-debug-asan
 ctest --preset dev-debug-asan
-
-# Run tests only from the 'Basic' suite
-ctest --preset dev-debug-asan -R Basic
 ```
 
-### 2. Static Analysis and Formatting
+Filter suites with a regex, e.g. only the rules tests:
 
-Static analysis tools are registered as custom targets or CTest tests within the project.
+```shell
+ctest --preset dev-debug-asan -R 'DeckInit|FirstTurn|RoundStart|RoundEnd'
+```
 
-| QA Target | CTest Command | Custom Build Command | Purpose |
-|:---|:---|:---|:---|
-| **Format Check** | `ctest --preset <preset> -R FormatCheck` | `cmake --build --preset <preset> --target format` | Runs `clang-format` in check mode. |
-| **Tidy Check** | `ctest --preset <preset> -R TidyCheck` | N/A | Runs `clang-tidy` for static analysis. |
+Individual QA checks are also available as `FormatCheck` / `TidyCheck` CTest tests. New GTest
+suites are registered with the `add_gtest(...)` helper (see any `tests/unit/*/CMakeLists.txt`).
 
-### 3. Code Coverage (LCOV/GCOV)
-
-To generate a coverage report, you must use the special **`ci-coverage`** preset, which enables the necessary `--coverage` flags (handled by `cmake/ProjectCoverage.cmake`).
-
-**Step 1: Configure and Build (using coverage flags)**
+### Coverage
 
 ```shell
 cmake --preset ci-coverage
-cmake --build --preset ci-coverage
-```
-
-**Step 2: Run the dedicated `coverage` target**
-
-This target automatically performs zero-counting, runs CTest to generate `.gcda` files, captures the data into LCOV format, filters system headers, and generates the final HTML report.
-
-```shell
 cmake --build --preset ci-coverage --target coverage
 ```
 
-The final HTML report will be located at: **`build/ci-coverage/coverage_report/index.html`**
+The HTML report lands at `build/ci-coverage/coverage_report/index.html`.
 
-## Configuration Details
+## Roadmap
 
-### CMake Modules and Targets
+- Concrete `ActionRule`s for the open / toss / beat phases (the phases run today, but the action
+  sets are still stubs, so the table does not yet fill during real play).
+- AI players (`Player::get_action`) and a CLI front-end (`include/durak/ui/cli`).
 
-| Module File | Interface Target | Description |
-|:---|:---|:---|
-| `ProjectOptions.cmake` | `project_options` | Sets required C++ standard (C++23) and optimization level (`-O3`). |
-| `ProjectSanitizers.cmake` | `project_sanitizers` | Applies ASan, TSan, MSan, or UBSan flags conditionally. |
-| `ProjectCoverage.cmake` | `project_coverage` | Applies GCC/Clang `--coverage` flags conditionally. |
+## License
 
-To apply flags to a target (e.g., `app`), you link against the corresponding interface target:
-
-```cmake
-target_link_libraries(app
-  PRIVATE
-    project_options
-    project_sanitizers
-    project_coverage
-)
-```
-
-# GTest Usage Examples: add_gtest function
-
-The examples below illustrate how to use the `add_gtest` function to register Google Test suites within the CMake build system, from the simplest case to the most complex one.
-
-## 1. Simplest Example (Minimal Configuration)
-
-This example is suitable for basic tests that link against a core project library and do not require special options or sanitizers.
-
-### Scenario: Testing a basic math utility.
-
-```cmake
-add_gtest(BasicMathTest
-  SOURCES
-    math_test.cpp
-  LIBRARIES
-    MyCoreLib::Math
-    GTest::gtest_main
-)
-````
-
-| Argument | Description |
-|:---|:---|
-| `BasicMathTest` | The name of the test executable and the test name in CTest. |
-| `SOURCES` | The single source file for the test executable. |
-| `LIBRARIES` | Links against the library under test and the main GTest library. |
-
------
-
-## 2\. Standard Example (Including Sanitizers and Coverage)
-
-This is the most common scenario, involving linking against the interface targets `project_options`, `project_sanitizers`, and `project_coverage` to ensure automatic support for all build modes (Debug, ASan, Coverage).
-
-### Scenario: Testing a network connection API component.
-
-```cmake
-add_gtest(NetworkAPITests
-  SOURCES
-    api_test.cpp
-    connection_mock.cpp
-  LIBRARIES
-    MyCoreLib::Networking
-    project_options
-    project_sanitizers
-    project_coverage
-  PROPERTIES
-    TIMEOUT 90
-)
-```
-
-| Argument | Description |
-|:---|:---|
-| `SOURCES` | Multiple files: the test itself and possibly mocks/stubs. |
-| `LIBRARIES` | Includes all interface targets for full integration. |
-| `PROPERTIES` | Sets a CTest property: execution timeout of 90 seconds. |
-
------
-
-## 3\. Advanced Example (Using All Flags)
-
-This example demonstrates the use of all available arguments, useful for tests that require a specific environment, custom compilation flags, or execution in a single thread.
-
-### Scenario: Testing a critical, thread-sensitive code section with extra debugging definitions.
-
-```cmake
-add_gtest(CriticalSectionTests
-  SOURCES
-    lock_free_test.cpp
-  LIBRARIES
-    MyCoreLib::Concurrency
-    project_options
-    project_sanitizers
-  
-  # Options
-  EXCLUSIVE
-  
-  # Values
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/tests/data
-  
-  # Additional compiler and linker settings
-  INCLUDE_DIRECTORIES
-    ${CMAKE_SOURCE_DIR}/third_party/atomic_queue/include
-  COMPILE_OPTIONS
-    -Wno-conversion
-  COMPILE_DEFINITIONS
-    USE_DEBUG_LOGGING
-    LOCK_FREE_ENABLED
-  LINK_OPTIONS
-    -Wl,--export-dynamic
-  
-  # Additional CTest properties
-  PROPERTIES
-    TIMEOUT 180
-    FIXTURES_SETUP "Setup_Heavy_System"
-    ENVIRONMENT "DEBUG_LEVEL=5;CONFIG_FILE=test.conf"
-)
-
-```
-| Argument | Description |
-|:---|:---|
-| `EXCLUSIVE` | Ensures this test runs sequentially (not in parallel), which is critical for TSan tests. |
-| `WORKING_DIRECTORY` | Sets the working directory, e.g., to access test data (config files). |
-| `INCLUDE_DIRECTORIES` | Adds an external header path (e.g., for a third-party library). |
-| `COMPILE_OPTIONS` | Suppresses a specific warning only for this test file. |
-| `COMPILE_DEFINITIONS` | Defines macros required for conditional compilation in test mode. |
-| `LINK_OPTIONS` | Passes specific flags to the linker. |
-| `PROPERTIES` | Additional CTest properties, including setting environment variables (`ENVIRONMENT`) or using test fixtures. |
-```
+Source-available under a custom license — you may view, build, and play. See [`LICENSE`](LICENSE).

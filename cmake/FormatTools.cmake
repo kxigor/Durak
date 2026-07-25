@@ -8,7 +8,7 @@
 # 
 # The search is performed silently, and the status/logging messages are 
 # presented here to the user, based on the outcome of the search.
-# This variable is intended to be used by the main MYPROJ_ENABLE_FORMAT_CHECK logic.
+# This variable is intended to be used by the main DURAK_ENABLE_FORMAT_CHECK logic.
 
 include_guard()
 
@@ -35,6 +35,6 @@ find_program(CLANG_FORMAT_EXE
 if(CLANG_FORMAT_EXE)
   message(STATUS "Clang-Format found: ${CLANG_FORMAT_EXE}. FormatCheck target is enabled.")
 else()
-  # If the tool is not found, the main logic should disable the MYPROJ_ENABLE_FORMAT_CHECK option.
+  # If the tool is not found, the main logic should disable the DURAK_ENABLE_FORMAT_CHECK option.
   message(WARNING "Clang-Format not found. FormatCheck target will be disabled.")
 endif()
