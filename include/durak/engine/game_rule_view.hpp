@@ -42,6 +42,8 @@ class GameRuleView {
 
   [[nodiscard]] modulo_base_t get_attacker_pos() const noexcept;
   [[nodiscard]] modulo_base_t get_defender_pos() const noexcept;
+  [[nodiscard]] modulo_base_t get_next_offset() const noexcept;
+  [[nodiscard]] modulo_base_t advance_seat(modulo_base_t pos) const;
   void set_attacker_pos(modulo_base_t pos);
   void set_defender_pos(modulo_base_t pos);
 

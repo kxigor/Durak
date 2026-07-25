@@ -3,9 +3,6 @@
 #include <include/durak/engine/config.hpp>
 #include <include/durak/engine/engine_fwd.hpp>
 #include <include/durak/engine/game_rule.hpp>
-#include <random>
-
-#include "card_face.hpp"
 
 namespace durak::rules {
 class FirstTurnRule : public engine::GameRule {
@@ -13,9 +10,7 @@ class FirstTurnRule : public engine::GameRule {
 
  public:
   /*================= Constructors/Destructors =================*/
-  explicit FirstTurnRule(
-      DeckKind kind = deck::kThirtySix,
-      std::mt19937::result_type seed = std::random_device{}());
+  FirstTurnRule() = default;
 
   FirstTurnRule(const FirstTurnRule& /*unused*/) = default;
   FirstTurnRule(FirstTurnRule&& /*unused*/) = default;
@@ -35,8 +30,9 @@ class FirstTurnRule : public engine::GameRule {
   [[nodiscard]] engine::rule_id_t get_id() const noexcept override;
 
  private:
-  /*======================= Data fields ========================*/
-  const DeckKind kind_{};
-  std::mt19937 gen_;
+  /*========================= Helpers ==========================*/
+  static void deal_initial_hands(engine::GameRuleView& view);
+  [[nodiscard]] static engine::modulo_base_t find_first_attacker(
+      const engine::GameRuleView& view);
 };
 }  // namespace durak::rules

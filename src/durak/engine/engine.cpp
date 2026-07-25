@@ -53,8 +53,8 @@ void DurakEngine::start(players_t players) {
   game_status_.is_game_running = true;
 
   auto view = rule_view();
-  k_first_turn_rule_->apply(view);
   k_deck_init_rule_->apply(view);
+  k_first_turn_rule_->apply(view);
 
   game_cycle();
 }

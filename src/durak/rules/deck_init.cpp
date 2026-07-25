@@ -71,7 +71,7 @@ void DeckInitRule::init_bita(std::vector<engine::Card>& bita) { bita.clear(); }
 
 void DeckInitRule::init_trump(std::vector<engine::Card>& stock,
                               engine::Card& trump) {
-  trump = stock.back();
+  trump = stock.front();
 }
 
 }  // namespace durak::rules

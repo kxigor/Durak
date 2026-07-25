@@ -2,4 +2,8 @@ target_sources(durak
   PRIVATE
     card_face.cpp
     deck_init.cpp
+    first_turn.cpp
+    round_start.cpp
+    round_end.cpp
+    turn_order.cpp
 )

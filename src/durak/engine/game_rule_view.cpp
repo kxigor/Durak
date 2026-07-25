@@ -45,6 +45,17 @@ modulo_base_t GameRuleView::get_defender_pos() const noexcept {
   return engine_.defender_pos_.get_num();
 }
 
+modulo_base_t GameRuleView::get_next_offset() const noexcept {
+  return engine_.k_next_offset_;
+}
+
+modulo_base_t GameRuleView::advance_seat(modulo_base_t pos) const {
+  const auto kCount = static_cast<modulo_base_t>(engine_.players_.size());
+  auto seat = DurakEngine::modulo_t{kCount, pos};
+  seat += engine_.k_next_offset_;
+  return seat.get_num();
+}
+
 void GameRuleView::set_attacker_pos(modulo_base_t pos) {
   auto count = static_cast<modulo_base_t>(engine_.players_.size());
   engine_.attacker_pos_ = DurakEngine::modulo_t{count, pos};
