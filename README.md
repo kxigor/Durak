@@ -17,13 +17,12 @@ Open **http://localhost:8189**. NGINX serves the board and styles and proxies
 `/api/` to the C++ server. The server validates each move, runs the bot and
 returns the human hand, visible cards and legal moves. A refresh restores the
 current game using a host-only HttpOnly cookie. Active games live in memory for
-up to two hours of inactivity and end on a backend restart. Completed solo results
+up to two hours of inactivity and end on a backend restart. Completed solo results for signed-in players
 are recorded once in PostgreSQL on the `pgdata` volume. The `init` service
 creates the schema and seeds Igor and Pavel before the API starts. Re-running
-it preserves users and scores. Guest nicknames share a leaderboard entry by display name.
-Register a username and password to
-earn scores under a verified identity (✓). Guest scores stay separate, including
-scores recorded before registration. Usernames are case-insensitive. Signing in
+it preserves users and scores. Guests can play under any nickname. Guest games are unranked and save no results.
+The leaderboard counts games started under a signed-in account (✓) and excludes
+historical guest results. Usernames are case-insensitive. Signing in
 rotates the seven-day account session. Signing out revokes it on the server.
 Passwords are hashed using Argon2id. There is no email or password recovery flow.
 
@@ -96,7 +95,7 @@ The updater checks the API through the frontend and restores the
 previous image tag after an unsuccessful update. Keep the Compose project name
 and volume across releases. To verify the full game locally in a disposable
 Compose project, run `python3 tests/web_game.py http://localhost:8189`. This
-check adds one completed game to its leaderboard.
+check plays an unranked guest game and verifies that the leaderboard stays unchanged.
 
 ## Architecture
 

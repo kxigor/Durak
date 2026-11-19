@@ -65,7 +65,7 @@
           </div>
           <form id="join" class="join">
             <h2>Play against the bot</h2>
-            <label for="player-name">Leaderboard name</label>
+            <label for="player-name" id="player-label">Guest nickname · unranked</label>
             <div class="join-controls">
               <input id="player-name" name="name" type="text" maxlength="20" autocomplete="nickname" placeholder="Your nickname" required>
               <button class="primary" type="submit">Start game</button>
@@ -103,7 +103,7 @@
       </section>
       <section class="scoreboard" aria-labelledby="score-title">
         <h2 id="score-title">Leaderboard</h2>
-        <p class="small-label">Ranked by wins against the bot</p>
+        <p class="small-label">Signed-in wins against the bot</p>
         <table>
           <thead><tr><th scope="col">Player</th><th scope="col"><abbr title="Wins">W</abbr></th><th scope="col"><abbr title="Losses">L</abbr></th><th scope="col"><abbr title="Draws">D</abbr></th></tr></thead>
           <tbody id="leaders"></tbody>

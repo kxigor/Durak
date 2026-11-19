@@ -37,7 +37,9 @@ jobs:
         run: |
           docker compose run --rm --no-deps init
           docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -U postgres -d durak < tests/db_permissions.sql
+          docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -U postgres -d durak -c "INSERT INTO results (id, name, outcome) VALUES ('legacy-guest', 'Igor', 'win')"
           python3 tests/web_game.py http://localhost:8189 --check-seeds
+          test "$(docker compose exec -T db psql -XAt -U postgres -d durak -c 'SELECT count(*) FROM results')" = 1
           python3 tests/web_accounts.py http://localhost:8189
           python3 tests/web_rooms.py http://localhost:8189
           curl -fsS http://localhost:8189/api/leaderboard > "$RUNNER_TEMP/leaders.json"

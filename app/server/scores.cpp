@@ -1,13 +1,11 @@
 #include "scores.hpp"
 
-void Scores::record(const std::string& game, const std::string& name,
-                    const std::string& outcome, const std::string& owner) {
+void Scores::record(const std::string& game, const std::string& owner,
+                    const std::string& outcome) {
   static constexpr char kInsert[] =
-      "INSERT INTO results (id, name, outcome, owner) VALUES ($1, $2, $3, $4) "
+      "INSERT INTO results (id, name, outcome, owner) VALUES ($1, $2, $3, $2) "
       "ON CONFLICT (id) DO NOTHING";
-  db_.query(kInsert,
-            {game.c_str(), name.c_str(), outcome.c_str(),
-             owner.empty() ? nullptr : owner.c_str()},
+  db_.query(kInsert, {game.c_str(), owner.c_str(), outcome.c_str()},
             PGRES_COMMAND_OK);
 }
 
@@ -16,7 +14,8 @@ nlohmann::json Scores::leaders() {
       "SELECT name, count(*) FILTER (WHERE outcome='win') AS wins, "
       "count(*) FILTER (WHERE outcome='loss') AS losses, "
       "count(*) FILTER (WHERE outcome='draw') AS draws, registered FROM "
-      "(SELECT name, outcome, owner IS NOT NULL AS registered FROM results "
+      "(SELECT owner AS name, outcome, true AS registered FROM results "
+      "WHERE owner IS NOT NULL "
       "UNION ALL "
       "SELECT login AS name, NULL AS outcome, false AS registered FROM users) "
       "AS entries "

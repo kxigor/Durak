@@ -1,10 +1,13 @@
 """Exercise a full browser game through the frontend proxy."""
 import http.cookies
 import json
+import secrets
 import sys
 import time
 import urllib.error
 import urllib.request
+
+from web_client import Client
 
 base = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8189"
 cookie = ""
@@ -37,14 +40,16 @@ def call(path, data=None, expected=200, authenticated=True):
 assert b"<html" in call("/")
 assert b"font-size" in call("/style.css")
 assert call("/api/health") == {"ok": True}
+leaders = call("/api/leaderboard")["leaders"]
 if "--check-seeds" in sys.argv[2:]:
-    leaders = call("/api/leaderboard")["leaders"]
     assert leaders == [
         {"name": name, "wins": 0, "losses": 0, "draws": 0}
         for name in ("Igor", "Pavel")
     ]
 call("/api/game", expected=404)
-name = "O'Brien-" + str(time.time_ns())[-12:]
+name = "player-" + secrets.token_hex(5)
+account = Client(base)
+account.call("auth/register", {"login": name, "password": secrets.token_urlsafe(24)}, 201)
 state = call("/api/games", {"name": name}, 201)
 call("/api/game", expected=404, authenticated=False)
 assert state == call("/api/game")
@@ -57,7 +62,7 @@ for turn in range(1500):
     if state["result"]:
         break
 assert state["phase"] == "finished"
-row = next(row for row in call("/api/leaderboard")["leaders"] if row["name"] == name)
-assert row[{"win": "wins", "loss": "losses", "draw": "draws"}[state["result"]]] == 1
-assert sum(row[k] for k in ("wins", "losses", "draws")) == 1
-print("Full game passed:", state["version"], "moves,", state["result"])
+assert call("/api/game") == state
+assert call("/api/games", {"name": "O'Brien"}, 201)["name"] == "O'Brien"
+assert call("/api/leaderboard")["leaders"] == leaders
+print("Unranked guest game passed:", state["version"], "moves,", state["result"])

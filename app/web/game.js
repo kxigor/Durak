@@ -308,6 +308,7 @@ async function initialize() {
     byId("account-name").hidden = !accountLogin;
     byId("account-open").hidden = Boolean(accountLogin);
     byId("sign-out").hidden = !accountLogin;
+    if (accountLogin) byId("player-label").textContent = "Playing as";
     nick.readOnly = Boolean(accountLogin);
     nick.value = accountLogin;
   } catch { message("Couldn’t load your account. Refresh to try again."); }

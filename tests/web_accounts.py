@@ -22,7 +22,10 @@ while not game["result"]:
     assert game["version"] < 1500
     time.sleep(0.12)
     game = first.call("moves", {"move": game["moves"][0], "version": game["version"]})
-assert any(row["name"] == name and row.get("registered") for row in first.call("leaderboard")["leaders"])
+assert first.call("game") == game
+score = next(row for row in first.call("leaderboard")["leaders"] if row["name"] == name)
+assert score["registered"] and score[{"win": "wins", "loss": "losses", "draw": "draws"}[game["result"]]] == 1
+assert sum(score[field] for field in ("wins", "losses", "draws")) == 1
 second.call("auth/login", dict(credentials, login=name.upper()))
 assert first.call("auth/me")["login"] == ""
 first.call("game", expected=404)

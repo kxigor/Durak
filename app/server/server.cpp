@@ -116,12 +116,13 @@ class Games {
   }
 
   void record(Session& session) {
-    if (!session.recorded && session.match.phase() == Phase::Finished) {
-      if (session.score_id.empty()) session.score_id = new_id();
-      scores_.record(session.score_id, session.name,
-                     std::string{session.match.result()}, session.owner);
-      session.recorded = true;
-    }
+    if (session.owner.empty() || session.recorded ||
+        session.match.phase() != Phase::Finished)
+      return;
+    if (session.score_id.empty()) session.score_id = new_id();
+    scores_.record(session.score_id, session.owner,
+                   std::string{session.match.result()});
+    session.recorded = true;
   }
 
   void access(const httplib::Request& req, httplib::Response& res,
