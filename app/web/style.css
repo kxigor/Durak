@@ -123,3 +123,13 @@ dialog form { margin-top: 1.2rem; }
 .account-form input { min-width: 0; font: inherit; color: var(--ink); border: 1px solid var(--line); background: var(--bg); padding: .55rem; }
 #account-note { color: var(--orange); }
 .member { color: var(--cyan); margin-left: .35rem; font-size: .75em; }
+
+.room-panel { padding: 1rem clamp(14px, 2.2vw, 28px); border-bottom: 1px solid var(--line); }
+.room-panel h2 { margin-bottom: .5rem; color: var(--cyan); }
+.room-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: .65rem 0; }
+.room-panel input { flex: 1 1 10rem; min-width: 0; color: var(--ink); background: var(--bg); border: 1px solid var(--line); padding: .55rem; }
+.room-roster { list-style: none; padding: 0; margin: .6rem 0; display: flex; gap: .4rem 1rem; flex-wrap: wrap; }
+.room-roster li { overflow-wrap: anywhere; }
+.room-roster .active { color: var(--green); }
+#room-note { margin-top: .6rem; }
+#room-signin { margin-top: .5rem; }

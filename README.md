@@ -6,7 +6,7 @@ hard-coded logic, which keeps the core engine deterministic and the game variant
 
 ## Play the web game
 
-The browser game is a 36-card, two-player match against a server-side bot.
+Play 36-card Durak against the server-side bot or invite friends to a private table for 2–6 players.
 Start it locally with Docker Compose v2 or later:
 
 ```sh
@@ -17,14 +17,24 @@ Open **http://localhost:8189**. NGINX serves the board and styles and proxies
 `/api/` to the C++ server. The server validates each move, runs the bot and
 returns the human hand, visible cards and legal moves. A refresh restores the
 current game using a host-only HttpOnly cookie. Active games live in memory for
-up to two hours of inactivity and end on a backend restart. Completed results
+up to two hours of inactivity and end on a backend restart. Completed solo results
 are recorded once in PostgreSQL on the `pgdata` volume. The `init` service
 creates the schema and seeds Igor and Pavel before the API starts. Re-running
-it preserves users and scores. The leaderboard totals results by display name. Guest nicknames are shared. Register a username and password to
+it preserves users and scores. Guest nicknames share a leaderboard entry by display name.
+Register a username and password to
 earn scores under a verified identity (✓). Guest scores stay separate, including
 scores recorded before registration. Usernames are case-insensitive. Signing in
 rotates the seven-day account session. Signing out revokes it on the server.
 Passwords are hashed using Argon2id. There is no email or password recovery flow.
+
+For online play, sign in and choose **Create room**. Share the invitation with up
+to five friends. Each friend signs in, opens the link and chooses **Join room**.
+The host can start once two seats are occupied. Each player sees their own hand
+and the other players’ card counts. Refreshing restores your seat. Choosing
+**Leave room** during play hands your seat to a bot. Leaving the lobby transfers
+hosting to the next player. The server holds at most 256 rooms in memory and
+expires a room after two hours without a change. A backend restart ends active
+rooms. Online matches do not count towards the solo leaderboard.
 
 ```sh
 curl --fail http://localhost:8189/api/health

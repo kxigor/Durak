@@ -52,3 +52,12 @@ std::optional<Json> payload(const httplib::Request& request,
   }
   return data;
 }
+
+bool in_range(const Json& value, int low, int high) {
+  if (value.is_number_unsigned()) {
+    return value.get<Json::number_unsigned_t>() <= static_cast<unsigned>(high);
+  }
+  if (!value.is_number_integer()) return false;
+  const auto number = value.get<Json::number_integer_t>();
+  return number >= low && number <= high;
+}

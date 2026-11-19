@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <include/durak/engine/card.hpp>
@@ -18,15 +19,20 @@ class Match {
   static constexpr int kTake = -1;
   static constexpr int kDone = -2;
 
+  static constexpr std::size_t kMaxPlayers = 6;
+
   explicit Match(std::mt19937::result_type seed = std::random_device{}());
+  Match(std::size_t players, std::mt19937::result_type seed);
   void play(int move);
+  [[nodiscard]] std::size_t actor() const;
+  [[nodiscard]] int computer_move() const;
   [[nodiscard]] std::vector<int> legal_moves() const;
   [[nodiscard]] const engine::GameRuleView& board() const noexcept;
   [[nodiscard]] Phase phase() const noexcept;
-  [[nodiscard]] std::string_view result() const noexcept;
+  [[nodiscard]] std::string_view result(std::size_t seat = 0) const;
 
  private:
-  [[nodiscard]] std::size_t actor() const;
+  void offer_throws(Phase phase);
   [[nodiscard]] bool accepts(engine::Card card) const;
   void apply(int move);
   void start_round();
@@ -37,6 +43,9 @@ class Match {
   engine::GameRuleView board_;
   Phase phase_{Phase::Attack};
   std::size_t limit_{};
+  std::vector<std::size_t> throwers_;
+  std::array<bool, kMaxPlayers> went_out_{};
+  bool solo_{};
 };
 
 }  // namespace durak::rules

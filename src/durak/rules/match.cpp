@@ -32,7 +32,12 @@ class Seat final : public engine::Player {
 
 }  // namespace
 
-Match::Match(std::mt19937::result_type seed)
+Match::Match(std::mt19937::result_type seed) : Match{2, seed} {
+  solo_ = true;
+  play_bot();
+}
+
+Match::Match(std::size_t players, std::mt19937::result_type seed)
     : engine_{FirstTurnRule::make(),
               1,
               DeckInitRule::make(deck::kThirtySix, seed),
@@ -43,30 +48,64 @@ Match::Match(std::mt19937::result_type seed)
               {}},
       board_{engine_} {
   engine::players_t seats;
-  seats.push_back(std::make_unique<Seat>(0U));
-  seats.push_back(std::make_unique<Seat>(1U));
+  if (players < 2 || players > kMaxPlayers) {
+    throw std::invalid_argument{"a table needs two to six players"};
+  }
+  for (std::size_t seat = 0; seat < players; ++seat) {
+    seats.push_back(std::make_unique<Seat>(seat));
+  }
   engine_.prepare(std::move(seats));
   start_round();
-  play_bot();
 }
 
 const engine::GameRuleView& Match::board() const noexcept { return board_; }
 Phase Match::phase() const noexcept { return phase_; }
 
-std::string_view Match::result() const noexcept {
+std::string_view Match::result(std::size_t seat) const {
   if (phase_ != Phase::Finished) {
     return {};
   }
-  if (board_.players().at(0)->has_cards()) {
+  if (board_.players().at(seat)->has_cards()) {
     return "loss";
   }
-  return board_.players().at(1)->has_cards() ? "win" : "draw";
+  if (went_out_.at(seat)) {
+    return "win";
+  }
+  const auto kRemaining = std::ranges::any_of(
+      board_.players(), [](const auto& player) { return player->has_cards(); });
+  return kRemaining ? "win" : "draw";
 }
 
 std::size_t Match::actor() const {
+  if (phase_ == Phase::Throw || phase_ == Phase::Pickup) {
+    return throwers_.front();
+  }
   return static_cast<std::size_t>(phase_ == Phase::Defend
                                       ? board_.get_defender_pos()
                                       : board_.get_attacker_pos());
+}
+
+void Match::offer_throws(Phase phase) {
+  phase_ = phase;
+  throwers_.clear();
+  auto pos = board_.get_attacker_pos();
+  if (solo_) {
+    throwers_.push_back(static_cast<std::size_t>(pos));
+    return;
+  }
+  if (board_.table().size() < limit_) {
+    for (std::size_t n = 0; n < board_.players().size(); ++n) {
+      const auto kSeat = static_cast<unsigned char>(pos);
+      if (pos != board_.get_defender_pos() &&
+          board_.players().at(kSeat)->has_cards()) {
+        throwers_.push_back(kSeat);
+      }
+      pos = board_.advance_seat(pos);
+    }
+  }
+  if (throwers_.empty()) {
+    end_round();
+  }
 }
 
 bool Match::accepts(engine::Card card) const {
@@ -122,22 +161,32 @@ void Match::start_round() {
 
 void Match::end_round() {
   RoundEndRule{}.apply(board_);
-  if (board_.stock().empty() && (!board_.players().at(0)->has_cards() ||
-                                 !board_.players().at(1)->has_cards())) {
-    phase_ = Phase::Finished;
-    engine_.end();
-    return;
+  if (board_.stock().empty()) {
+    const auto kRemaining = std::ranges::count_if(
+        board_.players(),
+        [](const auto& player) { return player->has_cards(); });
+    if (kRemaining <= 1) {
+      phase_ = Phase::Finished;
+      engine_.end();
+      return;
+    }
+    for (std::size_t seat = 0; seat < board_.players().size(); ++seat) {
+      went_out_.at(seat) = !board_.players().at(seat)->has_cards();
+    }
   }
   start_round();
 }
 
 void Match::apply(int move) {
   if (move == kDone) {
-    end_round();
+    throwers_.erase(throwers_.begin());
+    if (throwers_.empty()) {
+      end_round();
+    }
     return;
   }
   if (move == kTake) {
-    phase_ = Phase::Pickup;
+    offer_throws(Phase::Pickup);
     return;
   }
   auto& player = *board_.players().at(actor());
@@ -148,31 +197,39 @@ void Match::apply(int move) {
   auto& table = board_.table();
   if (phase_ == Phase::Defend) {
     table.beat(table.size() - 1, kCard);
-    phase_ = Phase::Throw;
+    offer_throws(Phase::Throw);
   } else {
     table.add_attack(kCard);
-    if (phase_ != Phase::Pickup) {
+    if (phase_ == Phase::Pickup) {
+      offer_throws(Phase::Pickup);
+    } else {
       phase_ = Phase::Defend;
     }
   }
 }
 
+int Match::computer_move() const {
+  const auto kMoves = legal_moves();
+  const auto kTrump = CardFace::from_id(board_.trump().id).suit;
+  constexpr int kTrumpPenalty = 20;
+  constexpr int kPassCost = 100;
+  const auto kCost = [kTrump](int move) {
+    if (move < 0) {
+      return kPassCost;
+    }
+    const auto kCard = CardFace::from_id(static_cast<engine::card_id_t>(move));
+    return static_cast<int>(kCard.rank) +
+           (kCard.suit == kTrump ? kTrumpPenalty : 0);
+  };
+  if (kMoves.empty()) {
+    throw std::logic_error{"the game is finished"};
+  }
+  return *std::ranges::min_element(kMoves, {}, kCost);
+}
+
 void Match::play_bot() {
-  while (phase_ != Phase::Finished && actor() == 1) {
-    const auto kMoves = legal_moves();
-    const auto kTrump = CardFace::from_id(board_.trump().id).suit;
-    constexpr int kTrumpPenalty = 20;
-    constexpr int kPassCost = 100;
-    const auto kCost = [kTrump](int move) {
-      if (move < 0) {
-        return kPassCost;
-      }
-      const auto kCard =
-          CardFace::from_id(static_cast<engine::card_id_t>(move));
-      return static_cast<int>(kCard.rank) +
-             (kCard.suit == kTrump ? kTrumpPenalty : 0);
-    };
-    apply(*std::ranges::min_element(kMoves, {}, kCost));
+  while (solo_ && phase_ != Phase::Finished && actor() == 1) {
+    apply(computer_move());
   }
 }
 
