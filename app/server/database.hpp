@@ -5,12 +5,16 @@
 #include <cstddef>
 #include <initializer_list>
 #include <memory>
+#include <string_view>
 
 using QueryResult = std::unique_ptr<PGresult, decltype(&PQclear)>;
 
 struct SqlStatement {
   template <std::size_t N>
-  consteval SqlStatement(const char (&literal)[N]) : text{literal} {}
+  consteval SqlStatement(const char (&literal)[N]) : text{literal} {
+    if (std::string_view{literal, N}.find('\0') != N - 1)
+      throw "SQL must be a constant null-terminated string";
+  }
 
   const char* const text;
 };
