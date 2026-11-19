@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#000000">
-  <title>Дурак · kxigor</title>
+  <title>Durak · kxigor</title>
   <link rel="stylesheet" href="/style.css">
   <script src="/game.js" defer></script>
 </head>
@@ -12,82 +12,82 @@
   <header class="topbar">
     <div class="bar-inner">
       <div class="wordmark"><span class="logo" aria-hidden="true">♠</span>kxigor<span class="path">/ durak</span></div>
-      <button type="button" id="rules-open" class="quiet">Правила</button>
+      <button type="button" id="rules-open" class="quiet">Rules</button>
     </div>
   </header>
   <main class="layout">
     <header class="page-title">
-      <h1>Подкидной дурак<span class="cursor" aria-hidden="true"></span></h1>
-      <p>36 карт <span aria-hidden="true">/</span> один на один с ботом</p>
+      <h1>Throw-in Durak<span class="cursor" aria-hidden="true"></span></h1>
+      <p>36 cards <span aria-hidden="true">/</span> head-to-head against the bot</p>
     </header>
     <p id="notice" class="notice" role="alert" hidden></p>
-    <button id="sync" type="button" class="quiet" hidden>Проверить состояние партии</button>
+    <button id="sync" type="button" class="quiet" hidden>Refresh game</button>
     <div class="columns">
-      <section class="arena" aria-label="Игра">
+      <section class="arena" aria-label="Game">
         <div id="lobby" class="lobby" hidden>
           <div class="fan" aria-hidden="true">
-            <div class="show-card fan-left"><span>Д ♣</span><b>♣</b><span>Д ♣</span></div>
-            <div class="show-card fan-mid red"><span>К ♦</span><b>♦</b><span>К ♦</span></div>
-            <div class="show-card fan-right"><span>Т ♠</span><b>♠</b><span>Т ♠</span></div>
+            <div class="show-card fan-left"><span>Q ♣</span><b>♣</b><span>Q ♣</span></div>
+            <div class="show-card fan-mid red"><span>K ♦</span><b>♦</b><span>K ♦</span></div>
+            <div class="show-card fan-right"><span>A ♠</span><b>♠</b><span>A ♠</span></div>
           </div>
           <form id="join" class="join">
-            <h2>Новая партия</h2>
-            <label for="player-name">Имя в таблице лидеров</label>
+            <h2>New game</h2>
+            <label for="player-name">Leaderboard name</label>
             <div class="join-controls">
-              <input id="player-name" name="name" type="text" maxlength="20" autocomplete="nickname" placeholder="Твой ник" required>
-              <button class="primary" type="submit">Начать игру</button>
+              <input id="player-name" name="name" type="text" maxlength="20" autocomplete="nickname" placeholder="Your nickname" required>
+              <button class="primary" type="submit">Start game</button>
             </div>
           </form>
         </div>
-        <p id="loading" role="status">Загрузка стола…</p>
+        <p id="loading" role="status">Loading game…</p>
         <div id="game" hidden>
           <div class="opponent">
-            <h2><span class="bot-icon" aria-hidden="true">:∎</span> Бот</h2>
-            <p><span id="opponent-count"></span> на руке</p>
+            <h2><span class="bot-icon" aria-hidden="true">:∎</span> Bot</h2>
+            <p><span id="opponent-count"></span> in hand</p>
           </div>
           <div class="field">
             <div class="stock">
-              <span class="small-label">Козырь</span>
+              <span class="small-label">Trump</span>
               <strong id="trump"></strong>
               <span id="stock-count"></span>
             </div>
-            <div id="table" class="table" aria-label="Карты на столе"></div>
+            <div id="table" class="table" aria-label="Cards on the table"></div>
           </div>
           <div class="player">
             <div class="player-header">
-              <h2 id="hand-title">Твоя рука</h2>
+              <h2 id="hand-title">Your hand</h2>
               <span id="hand-count"></span>
             </div>
             <p id="turn" class="turn" role="status" aria-live="polite"></p>
             <div id="hand" class="hand" role="group" aria-labelledby="hand-title"></div>
             <div id="actions" class="actions">
-              <button id="take" type="button" class="quiet" hidden>Беру</button>
-              <button id="done" type="button" class="primary" hidden>Бито</button>
-              <button id="again" type="button" class="primary" hidden>Новая партия</button>
+              <button id="take" type="button" class="quiet" hidden>Pick up</button>
+              <button id="done" type="button" class="primary" hidden>Pass</button>
+              <button id="again" type="button" class="primary" hidden>New game</button>
             </div>
           </div>
         </div>
       </section>
       <section class="scoreboard" aria-labelledby="score-title">
-        <h2 id="score-title">Таблица лидеров</h2>
-        <p class="small-label">Победы в игре против бота</p>
+        <h2 id="score-title">Leaderboard</h2>
+        <p class="small-label">Ranked by wins against the bot</p>
         <table>
-          <thead><tr><th scope="col">Игрок</th><th scope="col"><abbr title="Победы">В</abbr></th><th scope="col"><abbr title="Поражения">П</abbr></th><th scope="col"><abbr title="Ничьи">Н</abbr></th></tr></thead>
+          <thead><tr><th scope="col">Player</th><th scope="col"><abbr title="Wins">W</abbr></th><th scope="col"><abbr title="Losses">L</abbr></th><th scope="col"><abbr title="Draws">D</abbr></th></tr></thead>
           <tbody id="leaders"></tbody>
         </table>
-        <p id="score-note" class="score-note" role="status">Загрузка…</p>
-        <button type="button" id="score-retry" class="quiet" hidden>Повторить</button>
+        <p id="score-note" class="score-note" role="status">Loading…</p>
+        <button type="button" id="score-retry" class="quiet" hidden>Try again</button>
       </section>
     </div>
-    <noscript><p>Для игры включи JavaScript в браузере.</p></noscript>
+    <noscript><p>Enable JavaScript in your browser to play.</p></noscript>
   </main>
   <dialog id="rules" aria-labelledby="rules-title">
-    <h2 id="rules-title">Правила игры</h2>
-    <p>Каждому раздают по шесть карт. Первым ходит игрок с младшим козырем. Твоя цель — избавиться от карт, когда закончится колода.</p>
-    <p><strong>Атака.</strong> Выбери карту. Подкидывать можно карты тех же достоинств, что уже лежат на столе. За раунд разрешено до шести атакующих карт и не больше, чем было у соперника в начале раунда.</p>
-    <p><strong>Защита.</strong> Карту можно побить старшей той же масти или козырем. Козырь бьётся только старшим козырем. Если крыть нечем, нажми «Беру».</p>
-    <p><strong>Конец раунда.</strong> После успешной защиты атакующий может нажать «Бито». Карты уходят в отбой, игроки добирают до шести и защитник ходит следующим. Если защитник забрал стол, снова ходит атакующий.</p>
-    <form method="dialog"><button class="primary">К игре</button></form>
+    <h2 id="rules-title">How to play</h2>
+    <p>Each player starts with six cards. Whoever holds the lowest trump attacks first. Once the deck runs out, empty your hand to win.</p>
+    <p><strong>Attack.</strong> Lead with any card. To add another, match the rank of any card on the table. You can attack with up to six cards per round, capped at the number of cards the defender held at the start of the round.</p>
+    <p><strong>Defend.</strong> Beat an attack with a higher card of the same suit, or use a trump to beat any non-trump. Only a higher trump beats a trump. Choose <b>Pick up</b> to take all the cards on the table.</p>
+    <p><strong>End the round.</strong> Once all attacks are beaten, the attacker can choose <b>Pass</b> to discard the cards on the table. Both players draw back up to six while cards remain in the deck. The defender attacks next if they beat every card. If they picked up, the same attacker leads again.</p>
+    <form method="dialog"><button class="primary">Back to game</button></form>
   </dialog>
 </body>
 </html>

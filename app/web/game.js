@@ -8,16 +8,16 @@ const nick = byId("player-name");
 const syncButton = byId("sync");
 
 const suits = ["♣", "♦", "♥", "♠"];
-const suitNames = ["трефы", "бубны", "червы", "пики"];
-const figures = {11: "В", 12: "Д", 13: "К", 14: "Т"};
-const faceNames = {11: "валет", 12: "дама", 13: "король", 14: "туз"};
+const suitNames = ["clubs", "diamonds", "hearts", "spades"];
+const figures = {11: "J", 12: "Q", 13: "K", 14: "A"};
+const faceNames = {11: "Jack", 12: "Queen", 13: "King", 14: "Ace"};
 const turnText = {
-  attack: "Твой ход. Выбери карту для атаки.",
-  defend: "Твоя защита. Покрой карту или возьми стол.",
-  throw: "Подкинь карту или заверши раунд.",
-  pickup: "Бот берёт. Подкинь карту или заверши раунд."
+  attack: "Your turn. Choose a card to attack.",
+  defend: "Your turn to defend. Beat the card or pick up the pile.",
+  throw: "Play a matching rank or pass.",
+  pickup: "The bot is picking up. Add a matching rank or end the round."
 };
-const resultText = {win: "Победа! Ты избавился от карт.", loss: "Поражение. Бот избавился от карт.", draw: "Ничья. Обе руки пусты."};
+const resultText = {win: "You win! You played your last card.", loss: "You lose. The bot played its last card.", draw: "Draw. Both hands are empty."};
 
 let game = null;
 let waiting = false;
@@ -33,7 +33,7 @@ function element(tag, className, text) {
 
 function cardName(id) {
   const rank = Math.floor(id / 4) + 2;
-  return (faceNames[rank] ?? rank) + ", " + suitNames[id % 4];
+  return (faceNames[rank] ?? rank) + " of " + suitNames[id % 4];
 }
 
 function card(id, inHand) {
@@ -56,13 +56,7 @@ function card(id, inHand) {
 }
 
 function countCards(count) {
-  const lastTwo = count % 100;
-  let word = "карт";
-  if (lastTwo < 11 || lastTwo > 14) {
-    if (count % 10 === 1) word = "карта";
-    if (count % 10 >= 2 && count % 10 <= 4) word = "карты";
-  }
-  return count + " " + word;
+  return count + (count === 1 ? " card" : " cards");
 }
 
 function message(text) {
@@ -91,15 +85,15 @@ function render() {
 
   const table = byId("table");
   table.replaceChildren();
-  if (game.table.length === 0) table.append(element("p", "empty", "Стол пуст"));
+  if (game.table.length === 0) table.append(element("p", "empty", "No cards on the table"));
   for (const pair of game.table) {
     const cards = element("div", "table-pair");
     const attack = card(pair.attack, false);
-    attack.setAttribute("aria-label", "Атака — " + cardName(pair.attack));
+    attack.setAttribute("aria-label", "Attacking card: " + cardName(pair.attack));
     cards.append(attack);
     if (pair.defense !== null) {
       const defense = card(pair.defense, false);
-      defense.setAttribute("aria-label", "Отбой — " + cardName(pair.defense));
+      defense.setAttribute("aria-label", "Defending card: " + cardName(pair.defense));
       cards.append(defense);
     }
     table.append(cards);
@@ -112,7 +106,7 @@ function render() {
   byId("hand").replaceChildren(...game.hand.map((id) => card(id, true)));
   byId("take").hidden = !game.moves.includes(-1);
   byId("done").hidden = !game.moves.includes(-2);
-  byId("done").textContent = game.phase === "pickup" ? "Завершить раунд" : "Бито";
+  byId("done").textContent = game.phase === "pickup" ? "End round" : "Pass";
   byId("again").hidden = !finished;
   for (const control of byId("actions").querySelectorAll("button")) control.disabled = waiting || needsSync;
 }
@@ -160,7 +154,7 @@ async function synchronize() {
     if (game?.phase === "finished") refreshScores();
   } catch {
     needsSync = true;
-    message("Не удалось получить состояние стола. Проверь соединение и повтори запрос.");
+    message("Couldn’t load the game. Check your connection and try again.");
   } finally {
     waiting = false;
     render();
@@ -179,17 +173,17 @@ async function submit(path, payload) {
     if (game.phase === "finished") refreshScores();
   } catch (error) {
     if (error.status === 400 || error.status === 422) {
-      message(path === "games" ? "Сервер отклонил имя. Попробуй другой ник." : "Такой ход недоступен.");
+      message(path === "games" ? "Choose a different nickname and try again." : "You can’t play that move.");
     } else if (error.status === 429) {
-      message("Слишком много запросов. Подожди немного.");
+      message("Too many requests. Wait a moment and try again.");
     } else {
       try {
         await loadGame();
-        message(game ? "Показано текущее состояние партии." : "Активной партии нет. Можно начать новую.");
+        message(game ? "Game refreshed." : "You have no active game. Start a new one to play.");
         if (game?.phase === "finished") refreshScores();
       } catch {
         needsSync = true;
-        message("Связь со столом прервалась. Проверь состояние перед следующим ходом.");
+        message("Connection lost. Refresh the game before your next move.");
       }
     }
   } finally {
@@ -220,12 +214,12 @@ async function refreshScores() {
       return row;
     });
     byId("leaders").replaceChildren(...rows);
-    byId("score-note").textContent = rows.length ? "" : "Здесь появятся результаты завершённых партий.";
+    byId("score-note").textContent = rows.length ? "" : "Finish a game to appear on the leaderboard.";
     byId("score-note").hidden = Boolean(rows.length);
   } catch {
     if (requestId !== scoreRequest) return;
     byId("score-note").hidden = false;
-    byId("score-note").textContent = "Не удалось обновить рейтинг.";
+    byId("score-note").textContent = "Couldn’t refresh the leaderboard.";
     byId("score-retry").hidden = false;
   }
 }
@@ -241,12 +235,15 @@ byId("again").addEventListener("click", () => {
   render();
   nick.focus();
 });
+nick.addEventListener("invalid", () => {
+  if (nick.validity.valueMissing) nick.setCustomValidity("Enter a nickname.");
+});
 nick.addEventListener("input", () => nick.setCustomValidity(""));
 byId("join").addEventListener("submit", (event) => {
   event.preventDefault();
   const name = nick.value.trim();
   if (!name) {
-    nick.setCustomValidity("Введи имя.");
+    nick.setCustomValidity("Enter a nickname.");
     nick.reportValidity();
     return;
   }
