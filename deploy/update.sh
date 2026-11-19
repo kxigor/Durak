@@ -12,9 +12,13 @@ previous=$(cat .deployed 2>/dev/null || true)
 if [ -n "$previous" ] && ! healthy; then
   DURAK_TAG="$previous" compose up -d --no-build --pull never --wait --wait-timeout 75
 fi
-latest=$(curl --fail --silent --show-error --max-time 20 \
-  'https://api.github.com/repos/kxigor/Durak/actions/workflows/web.yml/runs?branch=main&event=push&status=success&per_page=1' |
-  jq -er '.workflow_runs[0].head_sha | select(type == "string" and test("^[0-9a-f]{40}$"))')
+feed=$(curl --fail --silent --show-error --max-time 20 \
+  'https://api.github.com/repos/kxigor/Durak/actions/workflows/web.yml/runs?branch=main&event=push&status=success&per_page=1')
+latest=$(printf '%s' "$feed" | jq -er '
+  if .workflow_runs == [] then ""
+  else .workflow_runs[0].head_sha | select(type == "string" and test("^[0-9a-f]{40}$"))
+  end')
+[ -n "$latest" ] || exit 0
 [ "${#latest}" -eq 40 ] || exit 1
 if [ "$latest" = "$previous" ] && healthy; then exit 0; fi
 export DURAK_TAG="$latest"
