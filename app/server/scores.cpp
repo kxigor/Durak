@@ -2,7 +2,7 @@
 
 void Scores::record(const std::string& game, const std::string& name,
                     const std::string& outcome, const std::string& owner) {
-  constexpr auto kInsert =
+  static constexpr char kInsert[] =
       "INSERT INTO results (id, name, outcome, owner) VALUES ($1, $2, $3, $4) "
       "ON CONFLICT (id) DO NOTHING";
   db_.query(kInsert,
@@ -12,7 +12,7 @@ void Scores::record(const std::string& game, const std::string& name,
 }
 
 nlohmann::json Scores::leaders() {
-  constexpr auto kQuery =
+  static constexpr char kQuery[] =
       "SELECT name, count(*) FILTER (WHERE outcome='win') AS wins, "
       "count(*) FILTER (WHERE outcome='loss') AS losses, "
       "count(*) FILTER (WHERE outcome='draw') AS draws, registered FROM "

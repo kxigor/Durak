@@ -7,13 +7,13 @@ Database::Database() : db_{PQconnectdb(""), PQfinish} {
     throw std::runtime_error{"cannot connect to the database"};
 }
 
-QueryResult Database::query(const char* sql,
+QueryResult Database::query(SqlStatement sql,
                             std::initializer_list<const char*> parameters,
                             ExecStatusType expected) {
   if (PQstatus(db_.get()) != CONNECTION_OK) PQreset(db_.get());
   QueryResult result{
-      PQexecParams(db_.get(), sql, static_cast<int>(parameters.size()), nullptr,
-                   parameters.begin(), nullptr, nullptr, 0),
+      PQexecParams(db_.get(), sql.text, static_cast<int>(parameters.size()),
+                   nullptr, parameters.begin(), nullptr, nullptr, 0),
       PQclear};
   if (!result || PQresultStatus(result.get()) != expected)
     throw std::runtime_error{"database query failed"};
