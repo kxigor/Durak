@@ -4,7 +4,7 @@ const byId = (id) => document.getElementById(id);
 const lobby = byId("lobby");
 const gameArea = byId("game");
 const notice = byId("notice");
-const nick = byId("player-name");
+const soloStart = byId("solo-start");
 const syncButton = byId("sync");
 
 const suits = ["♣", "♦", "♥", "♠"];
@@ -72,8 +72,9 @@ function render() {
   byId("loading").hidden = true;
   syncButton.hidden = !needsSync;
   syncButton.disabled = waiting;
-  byId("join").querySelector("button").disabled = waiting;
-  byId("join").setAttribute("aria-busy", String(waiting));
+  soloStart.disabled = waiting;
+  soloStart.textContent = accountLogin ? "Start game" : "Play as guest";
+  byId("guest-note").hidden = Boolean(accountLogin);
   if (!game) return;
 
   const trump = byId("trump");
@@ -141,7 +142,6 @@ async function request(path, body) {
 async function loadGame() {
   try {
     game = await request("game");
-    nick.value = game.name;
   } catch (error) {
     if (error.status !== 404) throw error;
     game = null;
@@ -174,11 +174,14 @@ async function submit(path, payload) {
   render();
   try {
     game = await request(path, payload);
-    nick.value = game.name;
     if (game.phase === "finished") refreshScores();
   } catch (error) {
+    if (path === "games" && error.status === 409) {
+      location.reload();
+      return;
+    }
     if (error.status === 400 || error.status === 422) {
-      message(path === "games" ? "Choose a different nickname and try again." : "You can’t play that move.");
+      message(path === "games" ? "Couldn’t start the game. Please try again." : "You can’t play that move.");
     } else if (error.status === 429) {
       message("Too many requests. Wait a moment and try again.");
     } else {
@@ -197,7 +200,7 @@ async function submit(path, payload) {
     if (keyboardInput) {
       const next = needsSync ? syncButton : game
         ? gameArea.querySelector("button:enabled:not([hidden])")
-        : nick;
+        : soloStart;
       next?.focus({preventScroll: true});
     }
   }
@@ -246,22 +249,9 @@ byId("again").addEventListener("click", () => {
   game = null;
   message("");
   render();
-  nick.focus();
+  soloStart.focus();
 });
-nick.addEventListener("invalid", () => {
-  if (nick.validity.valueMissing) nick.setCustomValidity("Enter a nickname.");
-});
-nick.addEventListener("input", () => nick.setCustomValidity(""));
-byId("join").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const name = nick.value.trim();
-  if (!name) {
-    nick.setCustomValidity("Enter a nickname.");
-    nick.reportValidity();
-    return;
-  }
-  submit("games", {name});
-});
+soloStart.addEventListener("click", () => submit("games", {account: accountLogin}));
 let signingUp = false;
 function accountMode(register) {
   signingUp = register;
@@ -308,9 +298,6 @@ async function initialize() {
     byId("account-name").hidden = !accountLogin;
     byId("account-open").hidden = Boolean(accountLogin);
     byId("sign-out").hidden = !accountLogin;
-    if (accountLogin) byId("player-label").textContent = "Playing as";
-    nick.readOnly = Boolean(accountLogin);
-    nick.value = accountLogin;
   } catch { message("Couldn’t load your account. Refresh to try again."); }
   if (accountLogin) await pollRoom();
   if (!onlineRoom) await synchronize();

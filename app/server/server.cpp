@@ -24,11 +24,9 @@ using durak::rules::Phase;
 using Clock = std::chrono::steady_clock;
 
 struct Session {
-  Session(std::string nickname, std::string account)
-      : name{std::move(nickname)}, owner{std::move(account)} {}
+  explicit Session(std::string account) : owner{std::move(account)} {}
   Match match;
   std::string score_id;
-  std::string name;
   std::string owner;
   int version{};
   Clock::time_point seen{Clock::now()};
@@ -36,22 +34,11 @@ struct Session {
 };
 
 Json snapshot(const Session& session) {
-  auto state = match_state(session.match, 0, session.name, session.version);
+  auto state = match_state(session.match, 0,
+                           session.owner.empty() ? "Guest" : session.owner,
+                           session.version);
   state["bot_count"] = session.match.board().players()[1]->get_card_count();
   return state;
-}
-
-bool valid_name(const std::string& name) {
-  if (name.empty() || name.size() > 80 || name.front() == ' ' ||
-      name.back() == ' ')
-    return false;
-  std::size_t count{};
-  for (const char character : name) {
-    const auto byte = static_cast<unsigned char>(character);
-    if (byte < 32 || byte == 127) return false;
-    if ((byte & 0xc0U) != 0x80U) ++count;
-  }
-  return count <= 20;
 }
 
 class Games {
@@ -78,14 +65,9 @@ class Games {
     auto data = payload(req, res);
     if (!data) return;
     const auto owner = accounts_.current(req);
-    std::string name = owner;
-    if (owner.empty()) {
-      if (!data->contains("name") || !data->at("name").is_string() ||
-          !valid_name(data->at("name").get_ref<const std::string&>())) {
-        res.status = 400;
-        return;
-      }
-      name = data->at("name").get<std::string>();
+    if (data->contains("account") && data->at("account") != owner) {
+      res.status = 409;
+      return;
     }
     std::scoped_lock lock{mutex_};
     const auto cutoff = Clock::now() - std::chrono::hours{2};
@@ -106,7 +88,7 @@ class Games {
       return;
     }
     const auto id = new_id();
-    auto entry = sessions_.try_emplace(id, name, owner).first;
+    auto entry = sessions_.try_emplace(id, owner).first;
     res.set_header(
         "Set-Cookie",
         "__Host-durak=" + id +

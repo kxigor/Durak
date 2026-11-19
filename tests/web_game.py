@@ -37,7 +37,8 @@ def call(path, data=None, expected=200, authenticated=True):
         return data
 
 
-assert b"<html" in call("/")
+page = call("/")
+assert b"Play as guest" in page and b'id="player-name"' not in page
 assert b"font-size" in call("/style.css")
 assert call("/api/health") == {"ok": True}
 leaders = call("/api/leaderboard")["leaders"]
@@ -50,7 +51,11 @@ call("/api/game", expected=404)
 name = "player-" + secrets.token_hex(5)
 account = Client(base)
 account.call("auth/register", {"login": name, "password": secrets.token_urlsafe(24)}, 201)
-state = call("/api/games", {"name": name}, 201)
+call("/api/games", {"account": name}, 409)
+account.call("games", {"account": ""}, 409)
+state = call("/api/games", {"account": ""}, 201)
+assert state["name"] == "Guest"
+assert call("/api/games", {"name": name}) == state
 call("/api/game", expected=404, authenticated=False)
 assert state == call("/api/game")
 call("/api/moves", {"move": 99, "version": 0}, 400)
@@ -63,6 +68,6 @@ for turn in range(1500):
         break
 assert state["phase"] == "finished"
 assert call("/api/game") == state
-assert call("/api/games", {"name": "O'Brien"}, 201)["name"] == "O'Brien"
+assert call("/api/games", {"name": name}, 201)["name"] == "Guest"
 assert call("/api/leaderboard")["leaders"] == leaders
 print("Unranked guest game passed:", state["version"], "moves,", state["result"])

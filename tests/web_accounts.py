@@ -16,7 +16,7 @@ assert first.call("auth/register", credentials, 201)["login"] == name
 second.call("auth/register", dict(credentials, login=name.upper()), 409)
 assert first.call("auth/me")["login"] == name
 second.call("auth/login", dict(credentials, password=secrets.token_urlsafe(20)), 401)
-game = first.call("games", {"name": "someone-else"}, 201)
+game = first.call("games", {"account": name, "name": "someone-else"}, 201)
 assert game["name"] == name
 while not game["result"]:
     assert game["version"] < 1500

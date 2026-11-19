@@ -20,7 +20,7 @@ current game using a host-only HttpOnly cookie. Active games live in memory for
 up to two hours of inactivity and end on a backend restart. Completed solo results for signed-in players
 are recorded once in PostgreSQL on the `pgdata` volume. The `init` service
 creates the schema and seeds Igor and Pavel before the API starts. Re-running
-it preserves users and scores. Guests can play under any nickname. Guest games are unranked and save no results.
+it preserves users and scores. Choose **Play as guest** to start immediately. Guest games are unranked and save no results.
 The leaderboard counts games started under a signed-in account (✓) and excludes
 historical guest results. Usernames are case-insensitive. Signing in
 rotates the seven-day account session. Signing out revokes it on the server.
