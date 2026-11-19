@@ -7,8 +7,8 @@
 
 class Scores {
  public:
-  void record(const std::string& game, const std::string& name,
-              const std::string& outcome, const std::string& owner);
+  void record(const std::string& game, const std::string& owner,
+              const std::string& outcome);
   nlohmann::json leaders();
 
  private:

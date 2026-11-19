@@ -63,14 +63,11 @@
             <div class="show-card fan-mid red"><span>K ♦</span><b>♦</b><span>K ♦</span></div>
             <div class="show-card fan-right"><span>A ♠</span><b>♠</b><span>A ♠</span></div>
           </div>
-          <form id="join" class="join">
+          <div class="join">
             <h2>Play against the bot</h2>
-            <label for="player-name">Leaderboard name</label>
-            <div class="join-controls">
-              <input id="player-name" name="name" type="text" maxlength="20" autocomplete="nickname" placeholder="Your nickname" required>
-              <button class="primary" type="submit">Start game</button>
-            </div>
-          </form>
+            <button class="primary" type="button" id="solo-start">Play as guest</button>
+            <p class="small-label" id="guest-note">Guest games don’t count toward the leaderboard.</p>
+          </div>
         </div>
         <p id="loading" role="status">Loading game…</p>
         <div id="game" hidden>
@@ -103,7 +100,7 @@
       </section>
       <section class="scoreboard" aria-labelledby="score-title">
         <h2 id="score-title">Leaderboard</h2>
-        <p class="small-label">Ranked by wins against the bot</p>
+        <p class="small-label">Signed-in wins against the bot</p>
         <table>
           <thead><tr><th scope="col">Player</th><th scope="col"><abbr title="Wins">W</abbr></th><th scope="col"><abbr title="Losses">L</abbr></th><th scope="col"><abbr title="Draws">D</abbr></th></tr></thead>
           <tbody id="leaders"></tbody>

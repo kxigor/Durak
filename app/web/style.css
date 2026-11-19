@@ -58,11 +58,9 @@ abbr { text-decoration: none; }
 .fan-mid { transform: rotate(-4deg); }
 .fan-right { transform: translate(50px,12px) rotate(14deg); }
 .red { color: var(--red); }
-.join { width: min(100%, 410px); }
+.join { width: min(100%, 410px); text-align: center; }
 .join h2 { text-align: center; font-size: 1.6rem; margin-bottom: 1.15rem; }
-.join label { display: block; font-size: .875rem; color: var(--dim); margin-bottom: .35rem; }
-.join-controls { display: flex; gap: .5rem; }
-.join input { min-width: 0; width: 100%; border: 1px solid var(--line); background: #000; color: #fff; padding: .6rem .75rem; }
+#guest-note { margin-top: .6rem; }
 .primary, .quiet { min-height: 42px; padding: .43rem .85rem; white-space: nowrap; border: 1px solid var(--line); }
 .primary { background: var(--cyan); color: #000; border-color: var(--cyan); font-weight: 700; }
 .quiet { background: transparent; color: var(--cyan); }
@@ -111,7 +109,6 @@ dialog form { margin-top: 1.2rem; }
   .field { grid-template-columns: 1fr; gap: 10px; }
   .stock { display: flex; align-items: center; border: 0; min-height: 0; gap: .6rem; }
   .table { min-height: 96px; }
-  .join-controls { flex-direction: column; }
   .lobby { padding: 20px 15px 25px; }
   .fan { transform: scale(.88); margin: 0; }
 }
