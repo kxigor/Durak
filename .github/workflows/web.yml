@@ -2,8 +2,7 @@ name: Web game
 on:
   push:
     branches: [main, feature/playable-web]
-  pull_request:
-    branches: [main]
+  pull_request: {}
 
 permissions:
   contents: read
@@ -38,6 +37,7 @@ jobs:
         run: |
           docker compose run --rm --no-deps init
           python3 tests/web_game.py http://localhost:8189 --check-seeds
+          python3 tests/web_accounts.py http://localhost:8189
           curl -fsS http://localhost:8189/api/leaderboard > "$RUNNER_TEMP/leaders.json"
           docker compose down
           docker compose up -d --wait --wait-timeout 90
