@@ -19,6 +19,7 @@ endif()
 # =========================================================
 # 1. OPTIONS (prefix with DURAK_ — rename to keep the cache name unique)
 # =========================================================
+option(DURAK_BUILD_WEB "Build the HTTP game server" OFF)
 option(DURAK_BUILD_APP           "Build the example app"             ${DURAK_DEV_DEFAULT})
 option(DURAK_BUILD_TESTS         "Build the GTest test suite"        ${DURAK_DEV_DEFAULT})
 option(DURAK_ENABLE_FORMAT_CHECK "Register clang-format as CTest"    ${DURAK_DEV_DEFAULT})
@@ -56,15 +57,19 @@ add_subdirectory(src)
 # =========================================================
 # 4. DEV-ONLY MACHINERY (skipped for subproject consumers)
 # =========================================================
-if(DURAK_BUILD_APP OR DURAK_BUILD_TESTS OR DURAK_ENABLE_COVERAGE)
+if(DURAK_BUILD_APP OR DURAK_BUILD_WEB OR DURAK_BUILD_TESTS OR DURAK_ENABLE_COVERAGE)
   list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
   include(ProjectOptions)
   include(ProjectSanitizers)
   include(ProjectCoverage)
 endif()
 
+if(DURAK_BUILD_WEB)
+  add_subdirectory(app/server)
+endif()
+
 if(DURAK_BUILD_APP)
-  add_subdirectory(app)
+  add_subdirectory(app/demo)
 endif()
 
 if(DURAK_BUILD_TESTS)

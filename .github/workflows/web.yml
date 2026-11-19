@@ -1,0 +1,77 @@
+name: Web game
+on:
+  push:
+    branches: [main, feature/playable-web]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Scan Git history for secrets
+        run: |
+          cd "$RUNNER_TEMP"
+          curl --fail --silent --show-error --location -o gitleaks.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks.tgz' | sha256sum -c -
+          tar -xzf gitleaks.tgz gitleaks
+          ./gitleaks git --redact=100 --no-banner --log-opts=--all "$GITHUB_WORKSPACE"
+      - run: docker compose up --build --detach --wait --wait-timeout 90
+      - name: Verify the published loopback port
+        run: |
+          curl --noproxy '*' --fail --silent --show-error http://127.0.0.1:8189/api/health || {
+            echo '::error::Health checks passed inside the containers, but the host cannot reach the published frontend port.'
+            exit 1
+          }
+      - name: Check seed data, initialization and a full game
+        run: |
+          docker compose run --rm --no-deps init
+          python3 tests/web_game.py http://localhost:8189 --check-seeds
+          curl -fsS http://localhost:8189/api/leaderboard > "$RUNNER_TEMP/leaders.json"
+          docker compose down
+          docker compose up -d --wait --wait-timeout 90
+          curl -fsS http://localhost:8189/api/leaderboard | cmp - "$RUNNER_TEMP/leaders.json"
+      - if: always()
+        run: docker compose down --volumes
+
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - name: Build and verify release images
+        env:
+          DURAK_REGISTRY: ghcr.io/kxigor
+          DURAK_TAG: ${{ github.sha }}
+        run: |
+          docker compose up --build --detach --wait --wait-timeout 90
+          python3 tests/web_game.py http://localhost:8189
+          docker compose down --volumes
+      - name: Publish verified images
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+          DURAK_REGISTRY: ghcr.io/kxigor
+          DURAK_TAG: ${{ github.sha }}
+        run: |
+          export DOCKER_CONFIG="$(mktemp -d)"
+          trap 'rm -rf -- "$DOCKER_CONFIG"' EXIT
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          unset REGISTRY_TOKEN
+          docker compose push backend frontend

@@ -4,9 +4,83 @@ A game engine for **Durak** (подкидной дурак), written in modern *
 rule-driven: the flow of a game is expressed as small, injectable rule objects rather than
 hard-coded logic, which keeps the core engine deterministic and the game variants pluggable.
 
-> Status: the engine core and the setup/round rules are implemented and unit-tested. The
-> per-move action rules (attack / toss / beat) and AI players are the next milestone — see
-> [Roadmap](#roadmap).
+## Play the web game
+
+The browser game is a 36-card, two-player match against a server-side bot.
+Start it locally with Docker Compose v2 or later:
+
+```sh
+docker compose up -d --build --wait
+```
+
+Open **http://localhost:8189**. NGINX serves the board and styles and proxies
+`/api/` to the C++ server. The server validates each move, runs the bot and
+returns the human hand, visible cards and legal moves. A refresh restores the
+current game using a host-only HttpOnly cookie. Active games live in memory for
+up to two hours of inactivity and end on a backend restart. Completed results
+are recorded once in PostgreSQL on the `pgdata` volume. The `init` service
+creates the schema and seeds Igor and Pavel before the API starts. Re-running
+it preserves users and scores. The leaderboard totals results by display name. Names are informal nicknames shared by anyone who
+chooses them.
+
+```sh
+curl --fail http://localhost:8189/api/health
+curl --fail http://localhost:8189/api/leaderboard
+docker compose down
+```
+
+Only NGINX publishes a port, bound to host loopback. In the standard Docker
+configuration its ingress bridge allows native Docker to forward the port. The
+API uses the internal game network. PostgreSQL listens on a Unix socket with
+peer authentication and has its network disabled. The API runs as the restricted
+database role `nobody`; the initializer runs as `postgres`. The database uses
+a random bootstrap password and the initializer clears it. Game containers
+drop capabilities, run as non-root and use read-only root filesystems.
+
+On the dedicated **game VPS** run the same Compose services on rootless Podman
+with `-f compose.yaml -f deploy/compose.isolated.yaml`. This removes the
+frontend's internet-facing bridge. Rootless Podman still publishes the loopback
+port from its internal network. Terminate HTTPS on the host and proxy to
+`127.0.0.1:8189`. Keep this VPS separate from other private infrastructure.
+
+### Automatic releases
+
+GitHub Actions runs the unit suites and plays a full game through NGINX. For a
+successful push to `main`, the workflow publishes images tagged with the commit
+SHA to GHCR. Make the two packages public for anonymous image pulls.
+The build and test jobs need no VPS credentials. The publish step uses GitHub’s
+short-lived job token for GHCR. The release contains application code and
+static assets. Keep TLS private keys and runtime databases on the game host.
+
+Install Gitleaks and run `git config --local core.hooksPath .githooks` in a new
+checkout to check outgoing commits before they leave the machine. CI also
+scans Git history with redacted output.
+
+The game VPS checks GitHub for a successful release every five minutes and
+pulls that SHA. GitHub has no SSH key for the VPS. The deploy script, Compose
+configuration and systemd user units are installed once by its administrator.
+Only application images are updated automatically.
+
+On the Ubuntu game VPS install Podman, docker-compose-v2, uidmap, passt, aardvark-dns,
+dbus-user-session, curl and jq. Enable lingering for the dedicated game
+account. As that user install the deployment files and start the socket:
+
+```sh
+install -d -m 700 ~/durak/deploy ~/durak/app/database ~/.config/systemd/user
+install -m 600 compose.yaml ~/durak/compose.yaml
+install -m 600 deploy/compose.isolated.yaml ~/durak/deploy/
+install -m 644 app/database/init.sql ~/durak/app/database/
+install -m 700 deploy/update.sh ~/durak/update.sh
+install -m 600 deploy/durak-update.{service,timer} ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now podman.socket durak-update.timer
+```
+
+The updater checks the API through the frontend and restores the
+previous image tag after an unsuccessful update. Keep the Compose project name
+and volume across releases. To verify the full game locally in a disposable
+Compose project, run `python3 tests/web_game.py http://localhost:8189`. This
+check adds one completed game to its leaderboard.
 
 ## Architecture
 
@@ -79,7 +153,11 @@ include/durak/
                  turn_order, game_constants
   ui/cli/        cli.hpp (placeholder for a future CLI front-end)
 src/durak/       engine/ and rules/ implementations
-app/main.cpp     minimal driver wiring the engine together
+app/demo/        example driver (durak_app)
+app/server/      HTTP API, PostgreSQL leaderboard and backend Dockerfile
+app/database/    schema and idempotent seed data
+app/web/         browser UI, NGINX and frontend Dockerfile
+deploy/          updater and systemd user units for the game VPS
 tests/unit/      basic/ · engine/ · rules/  (GTest)
 cmake/           ProjectOptions, Sanitizers, Coverage, Format/Tidy tooling
 ```
@@ -143,11 +221,11 @@ cmake --build --preset ci-coverage --target coverage
 
 The HTML report lands at `build/ci-coverage/coverage_report/index.html`.
 
-## Roadmap
+## Game modes
 
-- Concrete `ActionRule`s for the open / toss / beat phases (the phases run today, but the action
-  sets are still stubs, so the table does not yet fill during real play).
-- AI players (`Player::get_action`) and a CLI front-end (`include/durak/ui/cli`).
+The web game uses the step-based `rules::Match` mode with the existing deck,
+deal and round rules. The generic synchronous `DurakEngine::start` driver and
+its injectable action sets remain available for other game variants.
 
 ## License
 

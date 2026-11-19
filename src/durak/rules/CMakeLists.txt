@@ -1,5 +1,6 @@
 target_sources(durak
   PRIVATE
+    match.cpp
     card_face.cpp
     deck_init.cpp
     first_turn.cpp

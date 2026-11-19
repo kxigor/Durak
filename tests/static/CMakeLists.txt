@@ -3,12 +3,20 @@
 # ========================================
 
 file(GLOB_RECURSE ALL_SRCS CONFIGURE_DEPENDS
-  "${PROJECT_SOURCE_DIR}/app/*.cpp"
-  "${PROJECT_SOURCE_DIR}/app/*.hpp"
+  "${PROJECT_SOURCE_DIR}/app/demo/*.cpp"
+  "${PROJECT_SOURCE_DIR}/app/demo/*.hpp"
   "${PROJECT_SOURCE_DIR}/src/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/*.hpp"
   "${PROJECT_SOURCE_DIR}/include/*.hpp"
 )
+
+if(DURAK_BUILD_WEB)
+  file(GLOB SERVER_SRCS CONFIGURE_DEPENDS
+    "${PROJECT_SOURCE_DIR}/app/server/*.cpp"
+    "${PROJECT_SOURCE_DIR}/app/server/*.hpp"
+  )
+  list(APPEND ALL_SRCS ${SERVER_SRCS})
+endif()
 
 # ========================================
 # 2. SETTING SCRIPTS/CONFIGS

@@ -1,0 +1,9 @@
+[Unit]
+Description=Check for a tested Durak release
+
+[Timer]
+OnBootSec=30s
+OnUnitInactiveSec=5min
+
+[Install]
+WantedBy=timers.target

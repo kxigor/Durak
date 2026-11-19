@@ -29,3 +29,8 @@ add_gtest(RoundEnd
     project_coverage
     durak
 )
+
+add_gtest(Match
+  SOURCES match.cpp
+  LIBRARIES project_options project_coverage durak
+)

@@ -44,6 +44,7 @@ class DurakEngine {
   DurakEngine& operator=(DurakEngine&& /*unused*/) = delete;
 
   /*====================== Game Lifetime =======================*/
+  void prepare(players_t players);
   void start(players_t players);
 
   void end() noexcept;

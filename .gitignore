@@ -46,3 +46,20 @@ build
 
 # VSCODE
 .vscode
+
+# Local credentials and runtime data
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.ssh/
+secrets/
+credentials/
+.docker/
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.sqlite3-*
