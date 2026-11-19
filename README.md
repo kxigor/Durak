@@ -43,6 +43,14 @@ game host must also be unable to contact their public addresses.
 GitHub Actions runs the unit suites and plays a full game through NGINX. For a
 successful push to `main`, the workflow publishes images tagged with the commit
 SHA to GHCR. Make the two packages public for anonymous image pulls.
+The build and test jobs need no VPS credentials. The publish step uses GitHub’s
+short-lived job token for GHCR. The release contains application code and
+static assets. Keep TLS private keys and runtime databases on the game host.
+
+Install Gitleaks and run `git config --local core.hooksPath .githooks` in a new
+checkout to check outgoing commits before they leave the machine. CI also
+scans Git history with redacted output.
+
 The game VPS checks GitHub for a successful release every five minutes and
 pulls that SHA. GitHub has no SSH key for the VPS. The deploy script, Compose
 configuration and systemd user units are installed once by its administrator.
@@ -138,7 +146,10 @@ include/durak/
                  turn_order, game_constants
   ui/cli/        cli.hpp (placeholder for a future CLI front-end)
 src/durak/       engine/ and rules/ implementations
-app/main.cpp     minimal driver wiring the engine together
+app/demo/        example driver (durak_app)
+app/server/      HTTP API, SQLite leaderboard and backend Dockerfile
+app/web/         browser UI, NGINX and frontend Dockerfile
+deploy/          updater and systemd user units for the game VPS
 tests/unit/      basic/ · engine/ · rules/  (GTest)
 cmake/           ProjectOptions, Sanitizers, Coverage, Format/Tidy tooling
 ```

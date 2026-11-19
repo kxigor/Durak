@@ -15,7 +15,9 @@ services:
   backend:
     <<: *isolation
     image: ${DURAK_REGISTRY:-localhost}/durak-backend:${DURAK_TAG:-dev}
-    build: .
+    build:
+      context: .
+      dockerfile: app/server/Dockerfile
     user: "10001:10001"
     mem_limit: 128m
     cpus: 0.7
@@ -31,7 +33,7 @@ services:
   frontend:
     <<: *isolation
     image: ${DURAK_REGISTRY:-localhost}/durak-frontend:${DURAK_TAG:-dev}
-    build: ./frontend
+    build: ./app/web
     user: "101:101"
     depends_on:
       backend:

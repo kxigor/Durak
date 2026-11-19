@@ -65,11 +65,11 @@ if(DURAK_BUILD_APP OR DURAK_BUILD_WEB OR DURAK_BUILD_TESTS OR DURAK_ENABLE_COVER
 endif()
 
 if(DURAK_BUILD_WEB)
-  add_subdirectory(backend)
+  add_subdirectory(app/server)
 endif()
 
 if(DURAK_BUILD_APP)
-  add_subdirectory(app)
+  add_subdirectory(app/demo)
 endif()
 
 if(DURAK_BUILD_TESTS)
