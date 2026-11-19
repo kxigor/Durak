@@ -34,7 +34,14 @@ jobs:
             echo '::error::Health checks passed inside the containers, but the host cannot reach the published frontend port.'
             exit 1
           }
-      - run: python3 tests/web_game.py http://localhost:8189
+      - name: Check seed data, initialization and a full game
+        run: |
+          docker compose run --rm --no-deps init
+          python3 tests/web_game.py http://localhost:8189 --check-seeds
+          curl -fsS http://localhost:8189/api/leaderboard > "$RUNNER_TEMP/leaders.json"
+          docker compose down
+          docker compose up -d --wait --wait-timeout 90
+          curl -fsS http://localhost:8189/api/leaderboard | cmp - "$RUNNER_TEMP/leaders.json"
       - if: always()
         run: docker compose down --volumes
 
@@ -67,4 +74,4 @@ jobs:
           trap 'rm -rf -- "$DOCKER_CONFIG"' EXIT
           printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           unset REGISTRY_TOKEN
-          docker compose push
+          docker compose push backend frontend

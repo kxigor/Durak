@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
-#include <cstdlib>
 #include <include/durak/rules/match.hpp>
 #include <iostream>
 #include <map>
@@ -147,8 +146,6 @@ bool in_range(const Json& value, int low, int high) {
 
 class Games {
  public:
-  explicit Games(const char* path) : scores_{path} {}
-
   void routes(httplib::Server& server) {
     server.Get("/api/health",
                [](const auto&, auto& res) { reply(res, {{"ok", true}}); });
@@ -259,8 +256,7 @@ class Games {
 
 int main() {
   try {
-    const char* path = std::getenv("DURAK_SCORES");
-    Games games{path ? path : "/data/scores.sqlite3"};
+    Games games;
     httplib::Server server;
     server.new_task_queue = [] { return new httplib::ThreadPool{4, 32}; };
     server.set_payload_max_length(512);

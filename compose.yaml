@@ -11,17 +11,71 @@ x-isolation: &isolation
       max-size: 2m
       max-file: "2"
 
+x-database-client: &database-client
+  PGHOST: /var/run/postgresql
+  PGDATABASE: durak
+  PGCONNECT_TIMEOUT: "3"
+
 services:
+  db:
+    <<: *isolation
+    image: docker.io/library/postgres:17-bookworm
+    user: postgres
+    network_mode: none
+    mem_limit: 256m
+    shm_size: 64m
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - pg_socket:/var/run/postgresql
+    tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=8m,mode=1777"]
+    environment:
+      POSTGRES_DB: durak
+      POSTGRES_INITDB_ARGS: --auth-local=peer --auth-host=reject
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        export POSTGRES_PASSWORD="$$(head -c 48 /dev/urandom | base64)"
+        exec docker-entrypoint.sh postgres -c listen_addresses='' -c max_connections=16 -c shared_buffers=24MB
+    healthcheck:
+      test: [CMD-SHELL, 'test "$$(cat /proc/1/comm)" = postgres && pg_isready -q -U postgres -d durak']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  init:
+    <<: *isolation
+    image: docker.io/library/postgres:17-bookworm
+    user: postgres
+    network_mode: none
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      <<: *database-client
+      PGUSER: postgres
+    volumes: [pg_socket:/var/run/postgresql:ro]
+    configs:
+      - source: schema
+        target: /init.sql
+    entrypoint: [psql, -X, -w, -v, ON_ERROR_STOP=1, -f, /init.sql]
+
   backend:
     <<: *isolation
     image: ${DURAK_REGISTRY:-localhost}/durak-backend:${DURAK_TAG:-dev}
     build:
       context: .
       dockerfile: app/server/Dockerfile
-    user: "10001:10001"
+    user: "65534:65534"
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    environment:
+      <<: *database-client
+      PGUSER: nobody
     mem_limit: 128m
     cpus: 0.7
-    volumes: [scores:/data]
+    volumes: [pg_socket:/var/run/postgresql:ro]
     networks: [game]
     healthcheck:
       test: [CMD, curl, -fsS, http://127.0.0.1:8080/api/health]
@@ -42,15 +96,20 @@ services:
     cpus: 0.3
     tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=8m,mode=1777"]
     ports: ["127.0.0.1:8189:8080"]
-    networks: [game]
+    networks: [game, ingress]
     healthcheck:
       test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/api/health]
       interval: 10s
       timeout: 3s
       retries: 4
 
+configs:
+  schema:
+    file: ./app/database/init.sql
 volumes:
-  scores:
+  pgdata:
+  pg_socket:
 networks:
+  ingress: {}
   game:
     internal: true

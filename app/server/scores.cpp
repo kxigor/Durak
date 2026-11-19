@@ -1,68 +1,55 @@
 #include "scores.hpp"
 
-#include <memory>
+#include <array>
 #include <stdexcept>
 
 namespace {
-using Statement = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;
+using Result = std::unique_ptr<PGresult, decltype(&PQclear)>;
 
-Statement prepare(sqlite3* db, const char* sql) {
-  sqlite3_stmt* raw{};
-  if (sqlite3_prepare_v2(db, sql, -1, &raw, nullptr) != SQLITE_OK)
-    throw std::runtime_error{"database prepare failed"};
-  return Statement{raw, sqlite3_finalize};
-}
-
-void bind(sqlite3_stmt* stmt, int index, const std::string& value) {
-  if (sqlite3_bind_text(stmt, index, value.c_str(), -1, SQLITE_TRANSIENT) !=
-      SQLITE_OK)
-    throw std::runtime_error{"database bind failed"};
+Result checked(PGresult* raw, ExecStatusType expected) {
+  Result result{raw, PQclear};
+  if (!result || PQresultStatus(result.get()) != expected)
+    throw std::runtime_error{"leaderboard query failed"};
+  return result;
 }
 }  // namespace
 
-Scores::Scores(const char* path) {
-  if (sqlite3_open(path, &db_) != SQLITE_OK ||
-      sqlite3_exec(
-          db_,
-          "PRAGMA max_page_count=65536;"
-          "CREATE TABLE IF NOT EXISTS results("
-          "id TEXT PRIMARY KEY, name TEXT NOT NULL,"
-          "outcome TEXT NOT NULL CHECK(outcome IN ('win','loss','draw')));"
-          "CREATE INDEX IF NOT EXISTS names ON results(name);",
-          nullptr, nullptr, nullptr) != SQLITE_OK) {
-    sqlite3_close(db_);
-    throw std::runtime_error{"cannot initialize leaderboard"};
-  }
+Scores::Scores() : db_{PQconnectdb(""), PQfinish} {
+  if (!db_ || PQstatus(db_.get()) != CONNECTION_OK)
+    throw std::runtime_error{"cannot connect to leaderboard"};
 }
-Scores::~Scores() { sqlite3_close(db_); }
+
+PGconn* Scores::connection() {
+  if (PQstatus(db_.get()) != CONNECTION_OK) PQreset(db_.get());
+  return db_.get();
+}
 
 void Scores::record(const std::string& game, const std::string& name,
                     const std::string& outcome) {
-  auto stmt = prepare(
-      db_, "INSERT INTO results VALUES (?1,?2,?3) ON CONFLICT(id) DO NOTHING");
-  bind(stmt.get(), 1, game);
-  bind(stmt.get(), 2, name);
-  bind(stmt.get(), 3, outcome);
-  if (sqlite3_step(stmt.get()) != SQLITE_DONE)
-    throw std::runtime_error{"cannot save result"};
+  constexpr auto kInsert =
+      "INSERT INTO results (id, name, outcome) VALUES ($1, $2, $3) "
+      "ON CONFLICT (id) DO NOTHING";
+  const std::array params{game.c_str(), name.c_str(), outcome.c_str()};
+  checked(PQexecParams(connection(), kInsert, 3, nullptr, params.data(),
+                       nullptr, nullptr, 0),
+          PGRES_COMMAND_OK);
 }
 
-nlohmann::json Scores::leaders() const {
+nlohmann::json Scores::leaders() {
+  constexpr auto kQuery =
+      "SELECT name, count(*) FILTER (WHERE outcome='win') AS wins, "
+      "count(*) FILTER (WHERE outcome='loss') AS losses, "
+      "count(*) FILTER (WHERE outcome='draw') AS draws FROM "
+      "(SELECT name, outcome FROM results UNION ALL "
+      "SELECT login AS name, NULL AS outcome FROM users) AS entries "
+      "GROUP BY name ORDER BY wins DESC, losses ASC, draws DESC, name LIMIT 12";
+  auto result = checked(PQexec(connection(), kQuery), PGRES_TUPLES_OK);
   auto rows = nlohmann::json::array();
-  auto stmt = prepare(
-      db_,
-      "SELECT name,SUM(outcome='win'),SUM(outcome='loss'),SUM(outcome='draw') "
-      "FROM results GROUP BY name ORDER BY 2 DESC,3 ASC,4 DESC,name LIMIT 12");
-  int status{};
-  while ((status = sqlite3_step(stmt.get())) == SQLITE_ROW) {
-    const auto* name =
-        reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 0));
-    rows.push_back({{"name", name},
-                    {"wins", sqlite3_column_int64(stmt.get(), 1)},
-                    {"losses", sqlite3_column_int64(stmt.get(), 2)},
-                    {"draws", sqlite3_column_int64(stmt.get(), 3)}});
+  for (int row = 0; row < PQntuples(result.get()); ++row) {
+    rows.push_back({{"name", PQgetvalue(result.get(), row, 0)},
+                    {"wins", std::stoll(PQgetvalue(result.get(), row, 1))},
+                    {"losses", std::stoll(PQgetvalue(result.get(), row, 2))},
+                    {"draws", std::stoll(PQgetvalue(result.get(), row, 3))}});
   }
-  if (status != SQLITE_DONE)
-    throw std::runtime_error{"cannot read leaderboard"};
   return rows;
 }

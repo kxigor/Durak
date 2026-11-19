@@ -1,20 +1,19 @@
 #pragma once
 
-#include <sqlite3.h>
+#include <libpq-fe.h>
 
+#include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
 
 class Scores {
  public:
-  explicit Scores(const char* path);
-  Scores(const Scores&) = delete;
-  Scores& operator=(const Scores&) = delete;
-  ~Scores();
+  Scores();
   void record(const std::string& game, const std::string& name,
               const std::string& outcome);
-  nlohmann::json leaders() const;
+  nlohmann::json leaders();
 
  private:
-  sqlite3* db_{};
+  PGconn* connection();
+  std::unique_ptr<PGconn, decltype(&PQfinish)> db_;
 };

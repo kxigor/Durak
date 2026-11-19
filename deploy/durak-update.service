@@ -1,11 +1,11 @@
 [Unit]
 Description=Update the Durak game
-After=docker.service
-Requires=docker.service
+After=podman.socket
+Requires=podman.socket
 
 [Service]
 Type=oneshot
-Environment=DOCKER_HOST=unix://%t/docker.sock
+Environment=DOCKER_HOST=unix://%t/podman/podman.sock
 ExecStart=%h/durak/update.sh
 UMask=0077
 NoNewPrivileges=true
