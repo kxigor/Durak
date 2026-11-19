@@ -22,8 +22,11 @@ CREATE TABLE IF NOT EXISTS results (
     outcome text NOT NULL CHECK (outcome IN ('win', 'loss', 'draw'))
 );
 CREATE INDEX IF NOT EXISTS results_name ON results (name);
+DELETE FROM users
+WHERE (login, email) IN (('pavel', 'pavel@example.invalid'),
+                         ('yura', 'yura@example.invalid'));
 INSERT INTO users (login, email)
-VALUES ('pavel', 'pavel@example.invalid'), ('yura', 'yura@example.invalid')
+VALUES ('Igor', 'igor@example.invalid'), ('Pavel', 'pavel@example.invalid')
 ON CONFLICT (login) DO NOTHING;
 GRANT SELECT (login) ON users TO nobody;
 GRANT SELECT, INSERT ON results TO nobody;

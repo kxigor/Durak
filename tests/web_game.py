@@ -41,7 +41,7 @@ if "--check-seeds" in sys.argv[2:]:
     leaders = call("/api/leaderboard")["leaders"]
     assert leaders == [
         {"name": name, "wins": 0, "losses": 0, "draws": 0}
-        for name in ("pavel", "yura")
+        for name in ("Igor", "Pavel")
     ]
 call("/api/game", expected=404)
 name = "smoke-" + str(time.time_ns())[-12:]

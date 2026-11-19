@@ -19,7 +19,7 @@ returns the human hand, visible cards and legal moves. A refresh restores the
 current game using a host-only HttpOnly cookie. Active games live in memory for
 up to two hours of inactivity and end on a backend restart. Completed results
 are recorded once in PostgreSQL on the `pgdata` volume. The `init` service
-creates the schema and seeds pavel and yura before the API starts. Re-running
+creates the schema and seeds Igor and Pavel before the API starts. Re-running
 it preserves users and scores. The leaderboard totals results by display name. Names are informal nicknames shared by anyone who
 chooses them.
 
