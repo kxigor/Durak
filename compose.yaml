@@ -1,0 +1,54 @@
+name: durak
+x-isolation: &isolation
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 48
+  logging:
+    driver: json-file
+    options:
+      max-size: 2m
+      max-file: "2"
+
+services:
+  backend:
+    <<: *isolation
+    image: ${DURAK_REGISTRY:-localhost}/durak-backend:${DURAK_TAG:-dev}
+    build: .
+    user: "10001:10001"
+    mem_limit: 128m
+    cpus: 0.7
+    volumes: [scores:/data]
+    networks: [game]
+    healthcheck:
+      test: [CMD, curl, -fsS, http://127.0.0.1:8080/api/health]
+      interval: 10s
+      timeout: 3s
+      retries: 4
+      start_period: 3s
+
+  frontend:
+    <<: *isolation
+    image: ${DURAK_REGISTRY:-localhost}/durak-frontend:${DURAK_TAG:-dev}
+    build: ./frontend
+    user: "101:101"
+    depends_on:
+      backend:
+        condition: service_healthy
+    mem_limit: 48m
+    cpus: 0.3
+    tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=8m,mode=1777"]
+    ports: ["127.0.0.1:8189:8080"]
+    networks: [game]
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/api/health]
+      interval: 10s
+      timeout: 3s
+      retries: 4
+
+volumes:
+  scores:
+networks:
+  game:
+    internal: true

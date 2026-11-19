@@ -1,0 +1,46 @@
+name: Web game
+on:
+  push:
+    branches: [main, feature/playable-web]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: docker compose up --build --detach --wait --wait-timeout 90
+      - run: python3 tests/web_game.py http://localhost:8189
+      - if: always()
+        run: docker compose down --volumes
+
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Publish both images for this commit
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+        run: |
+          echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          export DURAK_REGISTRY="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" DURAK_TAG="$GITHUB_SHA"
+          docker compose up --build --detach --wait --wait-timeout 90
+          python3 tests/web_game.py http://localhost:8189
+          docker compose push

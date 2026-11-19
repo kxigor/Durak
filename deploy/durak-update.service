@@ -1,0 +1,11 @@
+[Unit]
+Description=Update the Durak game
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+Environment=DOCKER_HOST=unix://%t/docker.sock
+ExecStart=%h/durak/update.sh
+UMask=0077
+NoNewPrivileges=true

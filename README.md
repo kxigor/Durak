@@ -4,9 +4,68 @@ A game engine for **Durak** (подкидной дурак), written in modern *
 rule-driven: the flow of a game is expressed as small, injectable rule objects rather than
 hard-coded logic, which keeps the core engine deterministic and the game variants pluggable.
 
-> Status: the engine core and the setup/round rules are implemented and unit-tested. The
-> per-move action rules (attack / toss / beat) and AI players are the next milestone — see
-> [Roadmap](#roadmap).
+## Play the web game
+
+The browser game is a 36-card, two-player match against a server-side bot.
+Start it locally with Docker Compose v2 or later:
+
+```sh
+docker compose up -d --build --wait
+```
+
+Open **http://localhost:8189**. NGINX serves the board and styles and proxies
+`/api/` to the C++ server. The server validates each move, runs the bot and
+returns the human hand, visible cards and legal moves. A refresh restores the
+current game using a host-only HttpOnly cookie. Active games live in memory for
+up to two hours of inactivity and end on a backend restart. Completed results
+are recorded once in SQLite on the `scores` volume. The leaderboard totals
+results by display name. Names are informal nicknames shared by anyone who
+chooses them.
+
+```sh
+curl --fail http://localhost:8189/api/health
+curl --fail http://localhost:8189/api/leaderboard
+docker compose down
+```
+
+For a deployment use a **separate VPS** and a dedicated unprivileged account with
+rootless Docker and Compose. Only the frontend publishes a port, bound to host
+loopback. Terminate HTTPS on the game VPS and forward to `127.0.0.1:8189`.
+HTTPS is required for the session cookie on public domains. Both containers
+use an internal network, read-only root filesystems, dropped capabilities and
+resource limits. The backend writes only the scores volume. Keep the game
+outside the private networks of other infrastructure. Use a provider-level
+egress firewall to deny traffic to existing servers (IPv4 and IPv6) if the
+game host must also be unable to contact their public addresses.
+
+### Automatic releases
+
+GitHub Actions runs the unit suites and plays a full game through NGINX. For a
+successful push to `main`, the workflow publishes images tagged with the commit
+SHA to GHCR. Make the two packages public for anonymous image pulls.
+The game VPS checks GitHub for a successful release every five minutes and
+pulls that SHA. GitHub has no SSH key for the VPS. The deploy script, Compose
+configuration and systemd user units are installed once by its administrator.
+Only application images are updated automatically.
+
+On the **new game host**, with a working rootless Docker user service and
+curl/jq available, install these files from the repository as the game user:
+
+```sh
+install -d -m 700 ~/durak ~/.config/systemd/user
+install -m 600 compose.yaml ~/durak/compose.yaml
+install -m 700 deploy/update.sh ~/durak/update.sh
+install -m 600 deploy/durak-update.{service,timer} ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now durak-update.timer
+```
+
+Enable lingering for the game user so its Docker daemon and timer survive
+logout. The updater checks the API through the frontend and restores the
+previous image tag after an unsuccessful update. Keep the Compose project name
+and volume across releases. To verify the full game locally in a disposable
+Compose project, run `python3 tests/web_game.py http://localhost:8189`. This
+check adds one completed game to its leaderboard.
 
 ## Architecture
 
@@ -143,11 +202,11 @@ cmake --build --preset ci-coverage --target coverage
 
 The HTML report lands at `build/ci-coverage/coverage_report/index.html`.
 
-## Roadmap
+## Game modes
 
-- Concrete `ActionRule`s for the open / toss / beat phases (the phases run today, but the action
-  sets are still stubs, so the table does not yet fill during real play).
-- AI players (`Player::get_action`) and a CLI front-end (`include/durak/ui/cli`).
+The web game uses the step-based `rules::Match` mode with the existing deck,
+deal and round rules. The generic synchronous `DurakEngine::start` driver and
+its injectable action sets remain available for other game variants.
 
 ## License
 

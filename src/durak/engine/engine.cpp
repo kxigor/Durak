@@ -32,7 +32,7 @@ DurakEngine::DurakEngine(rule_t first_turn, modulo_base_t next_offset,
   }
 }
 
-void DurakEngine::start(players_t players) {
+void DurakEngine::prepare(players_t players) {
   // Seat positions on a ring sized to the player count. The offset must be
   // coprime with that count, otherwise a walk would skip players.
   auto count = static_cast<modulo_base_t>(players.size());
@@ -55,7 +55,10 @@ void DurakEngine::start(players_t players) {
   auto view = rule_view();
   k_deck_init_rule_->apply(view);
   k_first_turn_rule_->apply(view);
+}
 
+void DurakEngine::start(players_t players) {
+  prepare(std::move(players));
   game_cycle();
 }
 
