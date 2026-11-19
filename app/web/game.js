@@ -66,7 +66,8 @@ function message(text) {
 }
 
 function render() {
-  lobby.hidden = Boolean(game) || needsSync;
+  renderRoom();
+  lobby.hidden = Boolean(game) || needsSync || Boolean(onlineRoom);
   gameArea.hidden = !game;
   byId("loading").hidden = true;
   syncButton.hidden = !needsSync;
@@ -82,7 +83,9 @@ function render() {
   trump.classList.toggle("red", trumpSuit === 1 || trumpSuit === 2);
   trump.setAttribute("aria-label", cardName(game.trump));
   byId("stock-count").textContent = countCards(game.stock_count);
-  byId("opponent-count").textContent = countCards(game.bot_count);
+  byId("opponent-title").textContent = onlineRoom ? "Online table" : "Bot";
+  byId("opponent-summary").hidden = Boolean(onlineRoom);
+  if (!onlineRoom) byId("opponent-count").textContent = countCards(game.bot_count);
 
   const table = byId("table");
   table.replaceChildren();
@@ -102,13 +105,14 @@ function render() {
 
   gameArea.setAttribute("aria-busy", String(waiting));
   const finished = game.phase === "finished";
-  byId("turn").textContent = finished ? resultText[game.result] : turnText[game.phase];
+  byId("turn").textContent = onlineRoom ? roomTurnText() :
+    (finished ? resultText[game.result] : turnText[game.phase]);
   byId("hand-count").textContent = countCards(game.hand.length);
   byId("hand").replaceChildren(...game.hand.map((id) => card(id, true)));
   byId("take").hidden = !game.moves.includes(-1);
   byId("done").hidden = !game.moves.includes(-2);
-  byId("done").textContent = game.phase === "pickup" ? "End round" : "Pass";
-  byId("again").hidden = !finished;
+  byId("done").textContent = !onlineRoom && game.phase === "pickup" ? "End round" : "Pass";
+  byId("again").hidden = !finished || Boolean(onlineRoom);
   for (const control of byId("actions").querySelectorAll("button")) control.disabled = waiting || needsSync;
 }
 
@@ -200,7 +204,9 @@ async function submit(path, payload) {
 }
 
 function play(move) {
-  if (game?.moves.includes(move)) submit("moves", {move, version: game.version});
+  if (!game?.moves.includes(move)) return;
+  if (onlineRoom) roomAction("rooms/moves", {move});
+  else submit("moves", {move, version: game.version});
 }
 
 async function refreshScores() {
@@ -305,7 +311,9 @@ async function initialize() {
     nick.readOnly = Boolean(accountLogin);
     nick.value = accountLogin;
   } catch { message("Couldn’t load your account. Refresh to try again."); }
-  await synchronize();
+  if (accountLogin) await pollRoom();
+  if (!onlineRoom) await synchronize();
 }
+setupRooms();
 initialize();
 refreshScores();

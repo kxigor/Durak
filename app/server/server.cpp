@@ -14,6 +14,8 @@
 
 #include "accounts.hpp"
 #include "http.hpp"
+#include "match_state.hpp"
+#include "rooms.hpp"
 #include "scores.hpp"
 
 namespace {
@@ -33,47 +35,10 @@ struct Session {
   bool recorded{};
 };
 
-std::string_view phase_name(Phase phase) {
-  switch (phase) {
-    case Phase::Attack:
-      return "attack";
-    case Phase::Defend:
-      return "defend";
-    case Phase::Throw:
-      return "throw";
-    case Phase::Pickup:
-      return "pickup";
-    case Phase::Finished:
-      return "finished";
-    default:
-      throw std::logic_error{"unknown phase"};
-  }
-}
-
 Json snapshot(const Session& session) {
-  const auto& match = session.match;
-  const auto& board = match.board();
-  auto hand = Json::array();
-  for (const auto card : board.players()[0]->get_cards())
-    hand.push_back(card.id);
-  auto table = Json::array();
-  for (const auto& pair : board.table().get_cards()) {
-    table.push_back(
-        {{"attack", pair.get_attack_card().id},
-         {"defense",
-          pair.is_beaten() ? Json(pair.get_beat_card().id) : Json(nullptr)}});
-  }
-  auto result = match.result();
-  return {{"name", session.name},
-          {"hand", hand},
-          {"table", table},
-          {"bot_count", board.players()[1]->get_card_count()},
-          {"stock_count", board.stock().size()},
-          {"trump", board.trump().id},
-          {"phase", phase_name(match.phase())},
-          {"result", result.empty() ? Json(nullptr) : Json(result)},
-          {"moves", match.legal_moves()},
-          {"version", session.version}};
+  auto state = match_state(session.match, 0, session.name, session.version);
+  state["bot_count"] = session.match.board().players()[1]->get_card_count();
+  return state;
 }
 
 bool valid_name(const std::string& name) {
@@ -89,19 +54,11 @@ bool valid_name(const std::string& name) {
   return count <= 20;
 }
 
-bool in_range(const Json& value, int low, int high) {
-  if (value.is_number_unsigned()) {
-    return value.get<Json::number_unsigned_t>() <= static_cast<unsigned>(high);
-  }
-  if (!value.is_number_integer()) return false;
-  const auto number = value.get<Json::number_integer_t>();
-  return number >= low && number <= high;
-}
-
 class Games {
  public:
   void routes(httplib::Server& server) {
     accounts_.routes(server);
+    rooms_.routes(server);
     server.Get("/api/health",
                [](const auto&, auto& res) { reply(res, {{"ok", true}}); });
     server.Get("/api/leaderboard", [this](const auto&, auto& res) {
@@ -209,6 +166,7 @@ class Games {
   }
 
   Accounts accounts_;
+  Rooms rooms_{accounts_};
   Scores scores_;
   std::map<std::string, Session> sessions_;
   std::mutex mutex_;

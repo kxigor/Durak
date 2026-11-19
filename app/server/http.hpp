@@ -14,3 +14,4 @@ std::string cookie(const httplib::Request& request,
 void reply(httplib::Response& response, const Json& data);
 std::optional<Json> payload(const httplib::Request& request,
                             httplib::Response& response);
+bool in_range(const Json& value, int low, int high);

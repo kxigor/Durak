@@ -39,6 +39,7 @@ jobs:
           docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -U postgres -d durak < tests/db_permissions.sql
           python3 tests/web_game.py http://localhost:8189 --check-seeds
           python3 tests/web_accounts.py http://localhost:8189
+          python3 tests/web_rooms.py http://localhost:8189
           curl -fsS http://localhost:8189/api/leaderboard > "$RUNNER_TEMP/leaders.json"
           docker compose down
           docker compose up -d --wait --wait-timeout 90

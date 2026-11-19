@@ -7,6 +7,7 @@
   <title>Durak · kxigor</title>
   <link rel="icon" type="image/svg+xml" sizes="any" href="/favicon.svg">
   <link rel="stylesheet" href="/style.css">
+  <script src="/rooms.js" defer></script>
   <script src="/game.js" defer></script>
 </head>
 <body>
@@ -24,12 +25,38 @@
   <main class="layout">
     <header class="page-title">
       <h1>Throw-in Durak<span class="cursor" aria-hidden="true"></span></h1>
-      <p>36 cards <span aria-hidden="true">/</span> head-to-head against the bot</p>
+      <p>36 cards <span aria-hidden="true">/</span> solo or 2–6 players online</p>
     </header>
     <p id="notice" class="notice" role="alert" hidden></p>
     <button id="sync" type="button" class="quiet" hidden>Refresh game</button>
     <div class="columns">
       <section class="arena" aria-label="Game">
+        <section id="room-panel" class="room-panel" aria-label="Online rooms" hidden>
+          <h2 id="room-title">Play with friends</h2>
+          <div id="room-entry">
+            <p class="small-label" id="room-hint">Private table for 2–6 players.</p>
+            <button class="quiet" type="button" id="room-signin">Sign in to play online</button>
+            <form id="room-join" class="room-controls" hidden>
+              <button class="primary" type="button" id="room-create">Create room</button>
+              <label for="room-code" class="small-label">Invite link or code</label>
+              <input id="room-code" autocomplete="off" spellcheck="false" required>
+              <button class="quiet">Join room</button>
+            </form>
+          </div>
+          <div id="room-inside" hidden>
+            <ul class="room-roster" id="room-players"></ul>
+            <div id="room-invite-controls" class="room-controls">
+              <label for="room-link" class="small-label">Invite link</label>
+              <input id="room-link" readonly>
+              <button type="button" id="room-copy" class="quiet">Copy link</button>
+            </div>
+            <div class="bar-actions">
+              <button class="primary" type="button" id="room-start" hidden>Start game</button>
+              <button class="quiet" type="button" id="room-leave">Leave room</button>
+            </div>
+          </div>
+          <p id="room-note" class="small-label" role="status" hidden></p>
+        </section>
         <div id="lobby" class="lobby" hidden>
           <div class="fan" aria-hidden="true">
             <div class="show-card fan-left"><span>Q ♣</span><b>♣</b><span>Q ♣</span></div>
@@ -37,7 +64,7 @@
             <div class="show-card fan-right"><span>A ♠</span><b>♠</b><span>A ♠</span></div>
           </div>
           <form id="join" class="join">
-            <h2>New game</h2>
+            <h2>Play against the bot</h2>
             <label for="player-name">Leaderboard name</label>
             <div class="join-controls">
               <input id="player-name" name="name" type="text" maxlength="20" autocomplete="nickname" placeholder="Your nickname" required>
@@ -48,8 +75,8 @@
         <p id="loading" role="status">Loading game…</p>
         <div id="game" hidden>
           <div class="opponent">
-            <h2><span class="bot-icon" aria-hidden="true">:∎</span> Bot</h2>
-            <p><span id="opponent-count"></span> in hand</p>
+            <h2 id="opponent-title"><span class="bot-icon" aria-hidden="true">:∎</span> Bot</h2>
+            <p id="opponent-summary"><span id="opponent-count"></span> in hand</p>
           </div>
           <div class="field">
             <div class="stock">
@@ -108,7 +135,8 @@
     <p>Each player starts with six cards. Whoever holds the lowest trump attacks first. Once the deck runs out, empty your hand to win.</p>
     <p><strong>Attack.</strong> Lead with any card. To add another, match the rank of any card on the table. You can attack with up to six cards per round, capped at the number of cards the defender held at the start of the round.</p>
     <p><strong>Defend.</strong> Beat an attack with a higher card of the same suit, or use a trump to beat any non-trump. Only a higher trump beats a trump. Choose <b>Pick up</b> to take all the cards on the table.</p>
-    <p><strong>End the round.</strong> Once all attacks are beaten, the attacker can choose <b>Pass</b> to discard the cards on the table. Both players draw back up to six while cards remain in the deck. The defender attacks next if they beat every card. If they picked up, the same attacker leads again.</p>
+    <p><strong>End the round.</strong> Once all attacks are beaten and all attackers pass, the cards on the table are discarded. Players draw back up to six while cards remain in the deck. The defender attacks next if they beat every card. If they picked up, the next active player after the defender attacks. In a two-player game, the same attacker leads again.</p>
+    <p><strong>Online.</strong> Share a room link with up to five friends. After a defense or pickup, attackers take turns clockwise, starting with the lead attacker. Everyone can pass. The last player holding cards loses. If you leave a running game, a bot plays your seat.</p>
     <form method="dialog"><button class="primary">Back to game</button></form>
   </dialog>
 </body>
