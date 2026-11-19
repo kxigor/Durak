@@ -44,7 +44,7 @@ if "--check-seeds" in sys.argv[2:]:
         for name in ("Igor", "Pavel")
     ]
 call("/api/game", expected=404)
-name = "smoke-" + str(time.time_ns())[-12:]
+name = "O'Brien-" + str(time.time_ns())[-12:]
 state = call("/api/games", {"name": name}, 201)
 call("/api/game", expected=404, authenticated=False)
 assert state == call("/api/game")

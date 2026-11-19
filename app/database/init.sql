@@ -21,6 +21,15 @@ CREATE TABLE IF NOT EXISTS results (
     name text NOT NULL,
     outcome text NOT NULL CHECK (outcome IN ('win', 'loss', 'draw'))
 );
+CREATE TABLE IF NOT EXISTS accounts (
+    login text PRIMARY KEY,
+    password_hash text NOT NULL,
+    session_digest text UNIQUE,
+    expires_at timestamptz
+);
+ALTER TABLE results ADD COLUMN IF NOT EXISTS owner text REFERENCES accounts(login);
+GRANT SELECT, INSERT ON accounts TO nobody;
+GRANT UPDATE (session_digest, expires_at) ON accounts TO nobody;
 CREATE INDEX IF NOT EXISTS results_name ON results (name);
 DELETE FROM users
 WHERE (login, email) IN (('pavel', 'pavel@example.invalid'),

@@ -20,8 +20,11 @@ current game using a host-only HttpOnly cookie. Active games live in memory for
 up to two hours of inactivity and end on a backend restart. Completed results
 are recorded once in PostgreSQL on the `pgdata` volume. The `init` service
 creates the schema and seeds Igor and Pavel before the API starts. Re-running
-it preserves users and scores. The leaderboard totals results by display name. Names are informal nicknames shared by anyone who
-chooses them.
+it preserves users and scores. The leaderboard totals results by display name. Guest nicknames are shared. Register a username and password to
+earn scores under a verified identity (✓). Guest scores stay separate, including
+scores recorded before registration. Usernames are case-insensitive. Signing in
+rotates the seven-day account session. Signing out revokes it on the server.
+Passwords are hashed using Argon2id. There is no email or password recovery flow.
 
 ```sh
 curl --fail http://localhost:8189/api/health
@@ -59,7 +62,10 @@ scans Git history with redacted output.
 The game VPS checks GitHub for a successful release every five minutes and
 pulls that SHA. GitHub has no SSH key for the VPS. The deploy script, Compose
 configuration and systemd user units are installed once by its administrator.
-Only application images are updated automatically.
+Only application images are updated automatically. Before deploying a release with a
+schema change, install its `app/database/init.sql` on the host. The existing init
+container applies the idempotent migration before the backend starts. Keep local
+storage overrides when updating the operator files.
 
 On the Ubuntu game VPS install Podman, docker-compose-v2, uidmap, passt, aardvark-dns,
 dbus-user-session, curl and jq. Enable lingering for the dedicated game

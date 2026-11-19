@@ -1,5 +1,4 @@
 #include <httplib.h>
-#include <openssl/rand.h>
 
 #include <algorithm>
 #include <array>
@@ -13,52 +12,26 @@
 #include <stdexcept>
 #include <string>
 
+#include "accounts.hpp"
+#include "http.hpp"
 #include "scores.hpp"
 
 namespace {
-using Json = nlohmann::json;
 using durak::rules::Match;
 using durak::rules::Phase;
 using Clock = std::chrono::steady_clock;
 
 struct Session {
-  explicit Session(std::string nickname) : name{std::move(nickname)} {}
+  Session(std::string nickname, std::string account)
+      : name{std::move(nickname)}, owner{std::move(account)} {}
   Match match;
   std::string score_id;
   std::string name;
+  std::string owner;
   int version{};
   Clock::time_point seen{Clock::now()};
   bool recorded{};
 };
-
-std::string new_id() {
-  std::array<unsigned char, 32> bytes;
-  if (RAND_bytes(bytes.data(), static_cast<int>(bytes.size())) != 1)
-    throw std::runtime_error{"random source unavailable"};
-  constexpr std::string_view kHex{"0123456789abcdef"};
-  std::string id;
-  for (const auto byte : bytes) {
-    id.push_back(kHex[byte >> 4]);
-    id.push_back(kHex[byte & 15U]);
-  }
-  return id;
-}
-
-std::string cookie(const httplib::Request& request) {
-  const auto cookies = request.get_header_value("Cookie");
-  constexpr std::string_view kPrefix{"__Host-durak="};
-  std::string_view remaining{cookies};
-  while (!remaining.empty()) {
-    const auto separator = remaining.find(';');
-    auto item = remaining.substr(0, separator);
-    while (item.starts_with(' ')) item.remove_prefix(1);
-    if (item.starts_with(kPrefix) && item.size() == kPrefix.size() + 64)
-      return std::string{item.substr(kPrefix.size())};
-    if (separator == std::string_view::npos) break;
-    remaining.remove_prefix(separator + 1);
-  }
-  return {};
-}
 
 std::string_view phase_name(Phase phase) {
   switch (phase) {
@@ -103,25 +76,6 @@ Json snapshot(const Session& session) {
           {"version", session.version}};
 }
 
-void reply(httplib::Response& response, const Json& data) {
-  response.set_content(data.dump(), "application/json; charset=utf-8");
-}
-
-std::optional<Json> payload(const httplib::Request& request,
-                            httplib::Response& response) {
-  if (request.get_header_value("Content-Type") != "application/json" ||
-      request.get_header_value("Sec-Fetch-Site") == "cross-site") {
-    response.status = 403;
-    return {};
-  }
-  auto data = Json::parse(request.body, nullptr, false);
-  if (!data.is_object()) {
-    response.status = 400;
-    return {};
-  }
-  return data;
-}
-
 bool valid_name(const std::string& name) {
   if (name.empty() || name.size() > 80 || name.front() == ' ' ||
       name.back() == ' ')
@@ -147,6 +101,7 @@ bool in_range(const Json& value, int low, int high) {
 class Games {
  public:
   void routes(httplib::Server& server) {
+    accounts_.routes(server);
     server.Get("/api/health",
                [](const auto&, auto& res) { reply(res, {{"ok", true}}); });
     server.Get("/api/leaderboard", [this](const auto&, auto& res) {
@@ -165,10 +120,15 @@ class Games {
   void create(const httplib::Request& req, httplib::Response& res) {
     auto data = payload(req, res);
     if (!data) return;
-    if (!data->contains("name") || !data->at("name").is_string() ||
-        !valid_name(data->at("name").get_ref<const std::string&>())) {
-      res.status = 400;
-      return;
+    const auto owner = accounts_.current(req);
+    std::string name = owner;
+    if (owner.empty()) {
+      if (!data->contains("name") || !data->at("name").is_string() ||
+          !valid_name(data->at("name").get_ref<const std::string&>())) {
+        res.status = 400;
+        return;
+      }
+      name = data->at("name").get<std::string>();
     }
     std::scoped_lock lock{mutex_};
     const auto cutoff = Clock::now() - std::chrono::hours{2};
@@ -176,7 +136,7 @@ class Games {
       return entry.second.seen < cutoff;
     });
     const auto previous = sessions_.find(cookie(req));
-    if (previous != sessions_.end()) {
+    if (previous != sessions_.end() && previous->second.owner == owner) {
       if (previous->second.match.phase() != Phase::Finished) {
         reply(res, snapshot(previous->second));
         return;
@@ -189,8 +149,7 @@ class Games {
       return;
     }
     const auto id = new_id();
-    auto entry =
-        sessions_.try_emplace(id, data->at("name").get<std::string>()).first;
+    auto entry = sessions_.try_emplace(id, name, owner).first;
     res.set_header(
         "Set-Cookie",
         "__Host-durak=" + id +
@@ -203,7 +162,7 @@ class Games {
     if (!session.recorded && session.match.phase() == Phase::Finished) {
       if (session.score_id.empty()) session.score_id = new_id();
       scores_.record(session.score_id, session.name,
-                     std::string{session.match.result()});
+                     std::string{session.match.result()}, session.owner);
       session.recorded = true;
     }
   }
@@ -221,9 +180,10 @@ class Games {
         return;
       }
     }
+    const auto owner = accounts_.current(req);
     std::scoped_lock lock{mutex_};
     auto it = sessions_.find(cookie(req));
-    if (it == sessions_.end() ||
+    if (it == sessions_.end() || it->second.owner != owner ||
         it->second.seen + std::chrono::hours{2} < Clock::now()) {
       res.status = 404;
       return;
@@ -248,6 +208,7 @@ class Games {
     reply(res, snapshot(session));
   }
 
+  Accounts accounts_;
   Scores scores_;
   std::map<std::string, Session> sessions_;
   std::mutex mutex_;

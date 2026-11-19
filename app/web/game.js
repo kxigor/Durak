@@ -19,6 +19,7 @@ const turnText = {
 };
 const resultText = {win: "You win! You played your last card.", loss: "You lose. The bot played its last card.", draw: "Draw. Both hands are empty."};
 
+let accountLogin = "";
 let game = null;
 let waiting = false;
 let needsSync = false;
@@ -211,6 +212,12 @@ async function refreshScores() {
     const rows = leaders.map((entry) => {
       const row = element("tr");
       for (const field of ["name", "wins", "losses", "draws"]) row.append(element("td", "", entry[field]));
+      if (entry.registered) {
+        const badge = element("span", "member", "✓");
+        badge.title = "Registered player";
+        badge.setAttribute("aria-label", badge.title);
+        row.firstChild.append(badge);
+      }
       return row;
     });
     byId("leaders").replaceChildren(...rows);
@@ -249,5 +256,56 @@ byId("join").addEventListener("submit", (event) => {
   }
   submit("games", {name});
 });
-synchronize();
+let signingUp = false;
+function accountMode(register) {
+  signingUp = register;
+  byId("account-title").textContent = register ? "Create account" : "Sign in";
+  byId("account-submit").textContent = byId("account-title").textContent;
+  byId("account-switch").textContent = register ? "Sign in instead" : "Create account";
+  byId("account-help").hidden = !register;
+  byId("password").autocomplete = register ? "new-password" : "current-password";
+  byId("password").minLength = register ? 15 : 1;
+  byId("account-note").hidden = true;
+}
+byId("account-open").addEventListener("click", () => {
+  accountMode(false);
+  byId("account").showModal();
+});
+byId("account-switch").addEventListener("click", () => accountMode(!signingUp));
+byId("account-close").addEventListener("click", () => byId("account").close());
+byId("account").addEventListener("close", () => { byId("password").value = ""; });
+byId("account-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const submit = byId("account-submit");
+  if (submit.disabled) return;
+  submit.disabled = true;
+  try {
+    await request("auth/" + (signingUp ? "register" : "login"), {
+      login: byId("login").value, password: byId("password").value
+    });
+    location.reload();
+  } catch (error) {
+    const errors = {400: "Check your username and password length.", 401: "Incorrect username or password.",
+      409: "This username is taken.", 429: "Too many attempts. Please wait and try again."};
+    byId("account-note").textContent = errors[error.status] ?? "Couldn’t reach your account. Try again.";
+    byId("account-note").hidden = false;
+  } finally { submit.disabled = false; }
+});
+byId("sign-out").addEventListener("click", async () => {
+  try { await request("auth/logout", {}); location.reload(); }
+  catch { message("Couldn’t sign out. Try again."); }
+});
+async function initialize() {
+  try {
+    accountLogin = (await request("auth/me")).login;
+    byId("account-name").textContent = accountLogin;
+    byId("account-name").hidden = !accountLogin;
+    byId("account-open").hidden = Boolean(accountLogin);
+    byId("sign-out").hidden = !accountLogin;
+    nick.readOnly = Boolean(accountLogin);
+    nick.value = accountLogin;
+  } catch { message("Couldn’t load your account. Refresh to try again."); }
+  await synchronize();
+}
+initialize();
 refreshScores();

@@ -115,3 +115,11 @@ dialog form { margin-top: 1.2rem; }
   .lobby { padding: 20px 15px 25px; }
   .fan { transform: scale(.88); margin: 0; }
 }
+
+.bar-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.bar-inner { gap: .5rem; flex-wrap: wrap; padding-block: .45rem; }
+#account-name { overflow-wrap: anywhere; color: var(--green); }
+.account-form { display: grid; gap: .6rem; }
+.account-form input { min-width: 0; font: inherit; color: var(--ink); border: 1px solid var(--line); background: var(--bg); padding: .55rem; }
+#account-note { color: var(--orange); }
+.member { color: var(--cyan); margin-left: .35rem; font-size: .75em; }
